@@ -589,10 +589,163 @@
     </div>
   </div>
 
+  <!-- UNIFIED EQUIBLUE SUPER AI ASSISTANT FLOATING BADGE -->
+  <button class="ai-fab-badge" onclick="toggleAiChat()" title="Equiblue Super AI Assistant" style="position: fixed; bottom: 2rem; right: 2rem; height: 52px; padding: 0 1.35rem; border-radius: 30px; background: linear-gradient(135deg, #10b981 0%, #0070f3 100%); color: white; border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 10px 30px rgba(16, 185, 129, 0.45); cursor: pointer; display: flex; align-items: center; gap: 0.65rem; font-size: 0.95rem; font-weight: 800; z-index: 9999;">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L14.5 8.5L21 11L14.5 13.5L12 20L9.5 13.5L3 11L9.5 8.5L12 2Z" fill="#ffffff" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>
+    <span>✨ AI Assistant</span>
+  </button>
+
+  <div id="aiChatWindow" class="ai-chat-window" style="display: none; position: fixed; bottom: 6rem; right: 2rem; width: 420px; height: 560px; background: #232f52; border: 1px solid rgba(16,185,129,0.3); border-radius: 20px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7); z-index: 9999; flex-direction: column; overflow: hidden;">
+    <div style="background: rgba(11, 19, 43, 0.95); padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L14.5 8.5L21 11L14.5 13.5L12 20L9.5 13.5L3 11L9.5 8.5L12 2Z" fill="#10b981"/>
+        </svg>
+        <div>
+          <div style="font-weight:800; font-size:0.95rem; color:#fff;">Equiblue Super AI Assistant</div>
+          <div style="font-size:0.7rem; color:#34d399;">Unified Brain & Real-Time Data Intelligence</div>
+        </div>
+      </div>
+      <button onclick="toggleAiChat()" style="background:transparent; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer;">✕</button>
+    </div>
+
+    <div id="aiChatMessages" style="flex: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.875rem;">
+      <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #f8fafc; align-self: flex-start; padding: 0.8rem 1rem; border-radius: 8px; max-width: 88%;">
+        👋 Hello! I am your <strong>Equiblue Unified Super AI Assistant</strong>.<br><br>
+        I have real-time access to your <strong>Live Database & Technical Specifications</strong> across all 3 MIS apps!<br><br>
+        Ask me anything like:<br>
+        • <em>"When was the last distribution?"</em><br>
+        • <em>"What is our available stock?"</em><br>
+        • <em>"What is recommended biochar dosage?"</em>
+      </div>
+    </div>
+
+    <div style="padding: 6px 12px; background: rgba(0,0,0,0.3); display: flex; gap: 4px; overflow-x: auto;">
+      <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;" onclick="quickAiAsk('When was the last distribution?')">📦 Last Distribution</button>
+      <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;" onclick="quickAiAsk('What is our available stock?')">📊 Live Stock</button>
+      <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;" onclick="quickAiAsk('What is recommended biochar dosage per acre?')">🌾 Biochar Dosage</button>
+    </div>
+
+    <div style="padding: 0.85rem; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(11, 19, 43, 0.8); display: flex; gap: 0.5rem;">
+      <input type="text" id="aiChatInput" placeholder="Ask 'When was the last distribution?'..." style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.6rem 0.85rem; border-radius: 8px; color: #fff; outline: none;" onkeypress="if(event.key==='Enter') sendAiMessage()">
+      <button class="btn" style="padding: 6px 12px;" onclick="sendAiMessage()">Send</button>
+    </div>
+  </div>
+
   <div id="toastContainer" class="toast-container"></div>
 
   <script>
     const API_ENDPOINT = "https://pnm5izgdkvixfgp6oraa7rug40djdtf.lambda-url.us-east-1.on.aws/";
+
+    function toggleAiChat() {
+      const win = document.getElementById('aiChatWindow');
+      win.style.display = (win.style.display === 'none' || !win.style.display) ? 'flex' : 'none';
+    }
+
+    function quickAiAsk(txt) {
+      document.getElementById('aiChatInput').value = txt;
+      sendAiMessage();
+    }
+
+    function sendAiMessage() {
+      const input = document.getElementById('aiChatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendChatMessage(text, 'user');
+      input.value = '';
+
+      setTimeout(() => {
+        const reply = askEquiblueSuperAi(text);
+        appendChatMessage(reply, 'bot');
+      }, 500);
+    }
+
+    function appendChatMessage(msg, sender) {
+      const container = document.getElementById('aiChatMessages');
+      const bubble = document.createElement('div');
+      bubble.style.maxWidth = '88%';
+      bubble.style.padding = '0.8rem 1rem';
+      bubble.style.borderRadius = '8px';
+      bubble.style.lineHeight = '1.45';
+
+      if (sender === 'user') {
+        bubble.style.background = '#0070f3';
+        bubble.style.color = '#fff';
+        bubble.style.alignSelf = 'flex-end';
+        bubble.innerText = msg;
+      } else {
+        bubble.style.background = 'rgba(16, 185, 129, 0.15)';
+        bubble.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+        bubble.style.color = '#f8fafc';
+        bubble.style.alignSelf = 'flex-start';
+        bubble.innerHTML = msg;
+      }
+
+      container.appendChild(bubble);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function askEquiblueSuperAi(userPrompt) {
+      const prompt = userPrompt.toLowerCase();
+      
+      if (prompt.includes('last') && (prompt.includes('dispatch') || prompt.includes('distribution') || prompt.includes('delivery'))) {
+        if (AppState.transactions && AppState.transactions.length > 0) {
+          const lastTx = AppState.transactions[AppState.transactions.length - 1];
+          return `📦 <strong>LAST DISTRIBUTION REPORT:</strong><br><br>` +
+                 `• <strong>Invoice No:</strong> ${lastTx.invoiceNumber || lastTx['Invoice Number']}<br>` +
+                 `• <strong>Dispatch Date:</strong> ${lastTx.dispatchDate || lastTx['Dispatch Date']}<br>` +
+                 `• <strong>Farmer:</strong> ${lastTx.farmerName || lastTx['Farmer Name']} (${lastTx.village || lastTx['Village']})<br>` +
+                 `• <strong>Bags Dispatched:</strong> ${lastTx.bagsDispatched || lastTx['Bags Dispatched (25kg)']} Bags (${(lastTx.bagsDispatched || 0) * 25} kg)<br>` +
+                 `• <strong>Serials Allocated:</strong> <code>${lastTx.allocatedBagSerials || lastTx['Allocated Bag Serials']}</code>`;
+        } else {
+          return `📦 No dispatch invoices recorded yet. Issue a dispatch invoice under the Dispatches & Billing tab!`;
+        }
+      }
+
+      if (prompt.includes('how many farmer') || prompt.includes('total farmer') || prompt.includes('registered farmer')) {
+        const count = AppState.farmers ? AppState.farmers.length : 0;
+        return `👨‍🌾 <strong>FARMER DIRECTORY SUMMARY:</strong><br><br>We currently have <strong>${count} farmers</strong> registered in the Equiblue system.`;
+      }
+
+      if (prompt.includes('stock') || prompt.includes('available bag') || prompt.includes('total biochar')) {
+        const avail = AppState.metrics ? (AppState.metrics.availableBags || 0) : 0;
+        const disp = AppState.metrics ? (AppState.metrics.dispatchedBags || 0) : 0;
+        const totalKg = AppState.metrics ? (AppState.metrics.totalBiocharKg || 0) : 0;
+        return `📊 <strong>LIVE INVENTORY STOCK REPORT:</strong><br><br>` +
+               `• <strong>Total Biochar Produced:</strong> ${totalKg} kg<br>` +
+               `• <strong>Available Stock:</strong> ${avail} Bags (${avail * 25} kg)<br>` +
+               `• <strong>Dispatched to Farmers:</strong> ${disp} Bags (${disp * 25} kg)`;
+      }
+
+      if (prompt.includes('soc') || prompt.includes('carbon delta') || prompt.includes('sequestration')) {
+        return `🧪 <strong>TECHNICAL SOC SEQUESTRATION KNOWLEDGE:</strong><br><br>` +
+               `• <strong>Formula:</strong> Net SOC Delta % = Follow-up Case SOC % - Follow-up Control SOC %.<br>` +
+               `• <strong>Methodology:</strong> Walkley-Black / Dry Combustion with bulk density correction (g/cm³).<br>` +
+               `• <strong>Verra VM0044 Standard:</strong> Ensures long-term carbon permanence (>100 years) through pyrolysis-derived recalcitrant carbon.`;
+      }
+
+      if (prompt.includes('dosage') || prompt.includes('how much biochar') || prompt.includes('per acre')) {
+        return `🌾 <strong>TECHNICAL DOSAGE & APPLICATION GUIDE:</strong><br><br>` +
+               `• <strong>Recommended Rate:</strong> 1 to 2 Metric Tons per acre (40 to 80 bags of 25kg each).<br>` +
+               `• <strong>Application Method:</strong> Broadcast evenly across field and till into the top 15cm root zone prior to crop sowing.<br>` +
+               `• <strong>Pyrolysis Temperature:</strong> Produced at 500°C–700°C for optimal surface area & CEC.`;
+      }
+
+      if (prompt.includes('qr') || prompt.includes('bag tag') || prompt.includes('traceability')) {
+        return `🏷️ <strong>BAG TRACEABILITY & QR COMPLIANCE:</strong><br><br>` +
+               `Every 25kg bag carries a unique scannable QR sticker encoding kiln batch ID, serial tag range, farmer assignment, and Verra compliance certificate.`;
+      }
+
+      return `🤖 <strong>EQUIBLUE UNIFIED AI ASSISTANT:</strong><br><br>` +
+             `I have real-time access to your <strong>Live Database & Technical Specifications</strong>!<br><br>` +
+             `Try asking me:<br>` +
+             `• <em>"When was the last distribution?"</em><br>` +
+             `• <em>"What is our available stock?"</em><br>` +
+             `• <em>"What is recommended biochar dosage per acre?"</em>`;
+    }
 
     let AppState = { metrics: { totalBiocharKg: 0, availableBags: 0, dispatchedBags: 0, totalFarmers: 0, totalTransactions: 0 }, batches: [], bags: [], farmers: [], transactions: [] };
     let currentLoggedInUser = "admin";
