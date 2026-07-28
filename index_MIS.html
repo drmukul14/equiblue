@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Equiblue | Carbon Root MIS (AWS Powered)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- SheetJS Library for Reading & Exporting Excel Files -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- QRCode.js Library for Generating Scannable Bag QR Stickers -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-primary: #0b132b;
+      --bg-surface: #1c2541;
+      --bg-surface-elevated: #232f52;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --accent-primary: #10b981;
+      --accent-primary-hover: #059669;
+      --accent-glow: rgba(16, 185, 129, 0.25);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --status-available: #10b981;
+      --status-dispatched: #3b82f6;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+    body { background-color: var(--bg-primary); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+    .navbar {
+      background: rgba(28, 37, 65, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100;
+    }
+    .brand { display: flex; align-items: center; gap: 0.85rem; }
+    .brand-subtitle { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+    .nav-tabs { display: flex; background: rgba(11, 19, 43, 0.6); padding: 4px; border-radius: var(--radius-md); border: 1px solid var(--border-color); gap: 4px; }
+    .tab-btn {
+      background: transparent; border: none; color: var(--text-muted); padding: 0.6rem 1.2rem; border-radius: var(--radius-sm);
+      font-weight: 600; font-size: 0.875rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s ease;
+    }
+    .tab-btn:hover { color: var(--text-main); background: rgba(255, 255, 255, 0.05); }
+    .tab-btn.active { background: var(--accent-primary); color: #042f2e; box-shadow: 0 4px 12px var(--accent-glow); }
+    .status-badge {
+      display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600;
+      background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(52, 211, 153, 0.3);
+    }
+    .status-dot { width: 8px; height: 8px; background: #34d399; border-radius: 50%; box-shadow: 0 0 8px #34d399; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .main-container { flex: 1; padding: 2rem; max-width: 1400px; margin: 0 auto; width: 100%; }
+    .view-pane { display: none; animation: fadeIn 0.3s ease-in-out; }
+    .view-pane.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .metric-card {
+      background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md);
+      padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; transition: transform 0.2s ease;
+    }
+    .metric-card:hover { transform: translateY(-2px); border-color: rgba(16, 185, 129, 0.4); }
+    .metric-header { display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size: 0.875rem; font-weight: 500; }
+    .metric-value { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; }
+    .metric-foot { font-size: 0.8rem; color: var(--text-dim); }
+
+    .layout-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; }
+    .layout-grid-farmer { display: grid; grid-template-columns: 400px 1fr; gap: 2rem; }
+    @media (max-width: 1024px) { .layout-grid, .layout-grid-farmer { grid-template-columns: 1fr; } .navbar { flex-direction: column; gap: 1rem; } }
+
+    .panel { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.75rem; display: flex; flex-direction: column; gap: 1.25rem; }
+    .panel-title { font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .form-label { font-size: 0.825rem; font-weight: 600; color: var(--text-muted); }
+    .form-control {
+      background: rgba(11, 19, 43, 0.8); border: 1px solid var(--border-color); border-radius: var(--radius-sm);
+      padding: 0.65rem 0.85rem; color: var(--text-main); font-size: 0.9rem; outline: none; transition: border-color 0.2s ease; width: 100%;
+    }
+    .form-control:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 2px var(--accent-glow); }
+    .btn {
+      background: var(--accent-primary); color: #042f2e; border: none; padding: 0.8rem 1.5rem; border-radius: var(--radius-sm);
+      font-weight: 700; font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s ease;
+    }
+    .btn:hover { background: var(--accent-primary-hover); box-shadow: 0 4px 15px var(--accent-glow); }
+    .btn-secondary { background: rgba(255, 255, 255, 0.1); color: var(--text-main); }
+    .btn-excel { background: #107c41; color: white; }
+    .btn-excel:hover { background: #0b5c30; }
+    .btn-danger { background: #ef4444; color: white; }
+
+    .table-container { overflow-x: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; white-space: nowrap; }
+    th { background: rgba(11, 19, 43, 0.9); color: var(--text-muted); padding: 0.85rem 1rem; font-weight: 600; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); color: var(--text-main); }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    .tag-badge { font-family: 'JetBrains Mono', monospace; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; }
+    .tag-badge.dispatched { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-color: rgba(96, 165, 250, 0.3); }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(6px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-overlay.active { display: flex; }
+    .modal-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); width: 100%; max-width: 500px; padding: 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
+    .toast-container { position: fixed; bottom: 2rem; right: 2rem; z-index: 2000; display: flex; flex-direction: column; gap: 0.5rem; }
+    .toast { background: var(--bg-surface-elevated); border: 1px solid var(--accent-primary); color: var(--text-main); padding: 1rem 1.5rem; border-radius: var(--radius-md); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+
+    /* AI FLOATING ASSISTANT BADGE & CHAT WINDOW */
+    .ai-fab-badge {
+      position: fixed; bottom: 2rem; right: 2rem; height: 52px; padding: 0 1.35rem; border-radius: 30px;
+      background: linear-gradient(135deg, #f59e0b 0%, #10b981 100%); color: #042f2e; border: 1px solid rgba(255,255,255,0.3);
+      box-shadow: 0 10px 30px rgba(245, 158, 11, 0.45); cursor: pointer; display: flex; align-items: center; gap: 0.65rem;
+      font-size: 0.95rem; font-weight: 800; z-index: 9999; transition: all 0.25s ease; letter-spacing: -0.01em;
+    }
+    .ai-fab-badge:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 14px 40px rgba(16, 185, 129, 0.6); }
+
+    .ai-chat-window {
+      display: none; position: fixed; bottom: 6rem; right: 2rem; width: 420px; height: 560px;
+      background: #232f52; border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7); z-index: 9999; flex-direction: column; overflow: hidden;
+      animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .ai-chat-window.active { display: flex; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    .ai-chat-header {
+      background: rgba(11, 19, 43, 0.95); padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .ai-chat-messages { flex: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.875rem; }
+    
+    .chat-bubble { max-width: 88%; padding: 0.8rem 1rem; border-radius: 8px; line-height: 1.45; }
+    .chat-bubble.bot { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #f8fafc; align-self: flex-start; }
+    .chat-bubble.user { background: #f59e0b; color: #451a03; align-self: flex-end; font-weight:600; }
+
+    .ai-chat-input-area { padding: 0.85rem; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(11, 19, 43, 0.8); display: flex; gap: 0.5rem; }
+    .ai-chat-input-area input[type="text"] { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.6rem 0.85rem; border-radius: 8px; color: #fff; outline: none; }
+
+    /* PRINTABLE QR CODE STICKERS LAYOUT */
+    @media print {
+      body * { visibility: hidden; }
+      #qrStickerPrintContainer, #qrStickerPrintContainer * { visibility: visible; }
+      #qrStickerPrintContainer { position: absolute; left: 0; top: 0; width: 100%; background: white; color: black; padding: 10px; }
+      .qr-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; page-break-inside: avoid; }
+      .qr-sticker-card { border: 2px solid #000; padding: 12px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CLEAN LOGIN MODAL -->
+  <div id="loginModal" style="position: fixed; inset: 0; background: #0b132b; z-index: 999999; display: none; align-items: center; justify-content: center; padding: 1rem;">
+    <div style="background: var(--bg-surface); border: 1px solid var(--accent-glow); border-radius: var(--radius-lg); width: 100%; max-width: 420px; padding: 2.5rem 2rem; text-align: center; box-shadow: 0 0 50px rgba(16, 185, 129, 0.25);">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+        <svg width="76" height="76" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="34" cy="50" r="22" fill="#0066FF" stroke="#10b981" stroke-width="3.5"/>
+          <path d="M 22 45 Q 26 35 34 38 Q 42 42 45 35 Q 48 45 42 55 Q 35 60 28 58 Z" fill="#10b981"/>
+          <path d="M 28 62 Q 34 68 40 64 Q 44 58 36 56 Z" fill="#10b981"/>
+          <circle cx="66" cy="50" r="22" stroke="#10b981" stroke-width="3.5" fill="none"/>
+          <path d="M 52 35 C 56 26 68 28 72 36 C 62 38 56 46 52 35 Z" fill="#10b981"/>
+          <path d="M 76 42 C 84 44 86 54 78 58 C 76 50 68 46 76 42 Z" fill="#10b981"/>
+          <path d="M 72 60 C 78 66 74 74 66 72 C 64 64 68 60 72 60 Z" fill="#10b981"/>
+        </svg>
+        <div style="font-size: 1.75rem; font-weight: 900; letter-spacing: -0.02em;">
+          <span style="color: #ffffff;">EQUI</span><span style="color: #0070f3;">BLUE</span>
+        </div>
+        <p style="font-size: 0.85rem; color: #94a3b8;">Carbon Root MIS — AWS Serverless Edition</p>
+      </div>
+
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)" style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
+        <div class="form-group">
+          <label class="form-label">Select User Role</label>
+          <select id="loginRoleSelect" class="form-control" onchange="handleRoleDropdownChange(this.value)" style="width: 100%; font-weight: 700; color: #34d399; background: #0b132b;">
+            <option value="admin">👑 Administrator (Full Access)</option>
+            <option value="staff">👷 Field Staff (Data Entry Only)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input type="text" id="loginUsername" class="form-control" value="admin" placeholder="Enter username" style="width: 100%;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="loginPassword" class="form-control" value="carbonroot2026" placeholder="Enter password" style="width: 100%;">
+        </div>
+
+        <div id="loginErrorText" style="color: #ef4444; font-size: 0.85rem; display: none; text-align: center; font-weight: 600; padding: 0.5rem; background: rgba(239, 68, 68, 0.1); border-radius: 6px;"></div>
+        
+        <button type="submit" id="btnLoginSubmit" class="btn" style="width: 100%; margin-top: 0.5rem; padding: 0.9rem;">
+          Login to System
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="brand">
+      <svg width="42" height="42" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="34" cy="50" r="22" fill="#0066FF" stroke="#10b981" stroke-width="3.5"/>
+        <path d="M 22 45 Q 26 35 34 38 Q 42 42 45 35 Q 48 45 42 55 Q 35 60 28 58 Z" fill="#10b981"/>
+        <path d="M 28 62 Q 34 68 40 64 Q 44 58 36 56 Z" fill="#10b981"/>
+        <circle cx="66" cy="50" r="22" stroke="#10b981" stroke-width="3.5" fill="none"/>
+        <path d="M 52 35 C 56 26 68 28 72 36 C 62 38 56 46 52 35 Z" fill="#10b981"/>
+        <path d="M 76 42 C 84 44 86 54 78 58 C 76 50 68 46 76 42 Z" fill="#10b981"/>
+        <path d="M 72 60 C 78 66 74 74 66 72 C 64 64 68 60 72 60 Z" fill="#10b981"/>
+      </svg>
+      <div>
+        <div style="font-size: 1.35rem; font-weight: 900; letter-spacing: -0.02em; display: flex; align-items: center; gap: 6px;">
+          <span style="color: #ffffff;">EQUI</span><span style="color: #0070f3;">BLUE</span>
+          <span style="font-size: 0.65rem; color: #ff9900; font-weight: 700; border: 1px solid rgba(255,153,0,0.4); padding: 1px 6px; border-radius: 4px; background: rgba(255,153,0,0.1);">AWS POWERED</span>
+        </div>
+        <div class="brand-subtitle">Cloud Inventory & Farmer Distribution System</div>
+      </div>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
+      <button class="tab-btn" onclick="switchTab('inventory')">Inventory & Serials</button>
+      <button class="tab-btn" onclick="switchTab('farmers')">Farmer Directory</button>
+      <button class="tab-btn" onclick="switchTab('invoicing')">Dispatches & Billing</button>
+    </div>
+
+    <div style="display:flex; align-items:center; gap: 0.75rem;">
+      <span id="userRoleBadge" style="font-size:0.75rem; font-weight:700; background:rgba(255,255,255,0.1); padding:4px 8px; border-radius:6px; color:#38bdf8;">
+        User: Admin (Full Access)
+      </span>
+      <button class="btn btn-secondary" style="padding: 6px 10px; font-size: 0.8rem;" onclick="openChangePasswordModal()">
+        🔑 Password
+      </button>
+      <button id="btnAdminDeleteData" class="btn btn-danger" style="padding: 6px 10px; font-size: 0.8rem;" onclick="resetTestDatabase()">
+        🗑️ Delete Test Data
+      </button>
+      <button class="btn btn-secondary" style="padding: 6px 10px; font-size: 0.8rem;" onclick="handleLogout()">
+        Logout
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-container">
+
+    <section id="view-dashboard" class="view-pane active">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-header"><span>Total Biochar Output</span></div>
+          <div class="metric-value" id="dashTotalBiochar">0 kg</div>
+          <div class="metric-foot">Logged across all production batches</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header"><span>Available Stock (25kg Bags)</span></div>
+          <div class="metric-value" id="dashAvailableBags">0</div>
+          <div class="metric-foot" id="dashAvailableKg">0 kg biochar ready for dispatch</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header"><span>Dispatched Bags</span></div>
+          <div class="metric-value" id="dashDispatchedBags">0</div>
+          <div class="metric-foot" id="dashDispatchedKg">0 kg biochar distributed to farmers</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header"><span>Registered Farmers</span></div>
+          <div class="metric-value" id="dashTotalFarmers">303</div>
+          <div class="metric-foot">Active in project database</div>
+        </div>
+      </div>
+
+      <div class="layout-grid">
+        <div class="panel">
+          <div class="panel-title"><span>Inventory Status Pool</span></div>
+          <div style="padding: 1rem 0;">
+            <div style="display:flex; justify-content:space-between; font-size:0.875rem; margin-bottom: 0.5rem;">
+              <span style="color:var(--text-muted)">Dispatched vs Available</span>
+              <span id="stockRatioText">0% Dispatched</span>
+            </div>
+            <div style="height: 12px; background: rgba(255,255,255,0.1); border-radius: 6px; overflow: hidden; display: flex;">
+              <div id="barDispatched" style="width: 0%; background: #3b82f6;"></div>
+              <div id="barAvailable" style="width: 100%; background: #10b981;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <span>Recent Farmer Dispatches</span>
+            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="switchTab('invoicing')">Issue New Invoice</button>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Invoice No</th>
+                  <th>Date</th>
+                  <th>Farmer Name</th>
+                  <th>Village</th>
+                  <th>Bags</th>
+                  <th>Serials Allocated</th>
+                  <th>QR Traceability</th>
+                </tr>
+              </thead>
+              <tbody id="recentTransactionsTable">
+                <tr><td colspan="7" style="text-align:center; color:var(--text-muted)">No dispatches recorded yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-inventory" class="view-pane">
+      <div class="layout-grid">
+        <div class="panel">
+          <div class="panel-title"><span>Log Production Batch</span></div>
+          <form id="batchForm" onsubmit="handleBatchSubmit(event)">
+            <div class="form-group">
+              <label class="form-label">Warehouse Entry / Production Date *</label>
+              <input type="date" id="batchEntryDateInput" class="form-control" required>
+            </div>
+            <div class="form-group" style="margin-top:0.5rem;">
+              <label class="form-label">Batch ID *</label>
+              <input type="text" id="batchIdInput" class="form-control" placeholder="B01" required>
+            </div>
+            <div class="form-group" style="margin-top:0.5rem;">
+              <label class="form-label">Location / Kiln Unit *</label>
+              <input type="text" id="batchLocationInput" class="form-control" placeholder="Kiln Site A" required>
+            </div>
+            <div class="form-group" style="margin-top:0.5rem;">
+              <label class="form-label">Total Biochar Output (kg) *</label>
+              <input type="number" id="biocharOutputInput" class="form-control" placeholder="500" required min="25">
+            </div>
+            <button type="submit" class="btn" style="width:100%; margin-top: 1rem;">Save Batch & Generate Bags</button>
+          </form>
+
+          <!-- ADMIN BATCH DELETION FOR INCORRECT ENTRIES -->
+          <div id="adminBatchDeleteCard" style="margin-top: 1rem; background: rgba(239, 68, 68, 0.1); border: 1px dashed rgba(239, 68, 68, 0.4); padding: 0.85rem; border-radius: var(--radius-md);">
+            <div style="font-weight: 700; font-size: 0.85rem; color: #f87171; margin-bottom: 0.4rem;">
+              🗑️ Delete Wrong Batch Entry (Admin Only)
+            </div>
+            <div style="display:flex; gap: 0.5rem;">
+              <select id="deleteBatchSelect" class="form-control" style="font-size:0.8rem; padding:0.4rem 0.6rem;">
+                <option value="">-- Select Batch to Delete --</option>
+              </select>
+              <button type="button" class="btn btn-danger" style="padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="handleDeleteBatchClick()">Delete Batch</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title"><span>Serialized 25kg Bag Inventory</span></div>
+          <div class="table-container" style="max-height: 520px; overflow-y: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Serial Tag</th>
+                  <th>Batch ID</th>
+                  <th>Warehouse Entry Date</th>
+                  <th>Location</th>
+                  <th>Weight</th>
+                  <th>Status</th>
+                  <th>Invoice Ref</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="bagsTableBody">
+                <tr><td colspan="8" style="text-align:center; color:var(--text-muted)">No bags in inventory yet. Log a production batch to generate tags.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FARMER DIRECTORY VIEW -->
+    <section id="view-farmers" class="view-pane">
+      <div class="layout-grid-farmer">
+        <div class="panel">
+          <div class="panel-title"><span>Register New Farmer</span></div>
+          <form id="farmerForm" onsubmit="handleFarmerSubmit(event)">
+            
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">Farmer Code (Optional)</label>
+                <input type="text" id="fCode" class="form-control" placeholder="CR101 (Auto)">
+              </div>
+              <div class="form-group">
+                <label class="form-label">1. Farmer Name *</label>
+                <input type="text" id="fName" class="form-control" placeholder="Ramesh Kumar" required>
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">2. Gender</label>
+                <select id="fGender" class="form-control">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">3. Age</label>
+                <input type="number" id="fAge" class="form-control" placeholder="38" min="18" max="100">
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">4. Mobile Number *</label>
+                <input type="tel" id="fMobile" class="form-control" placeholder="9876543210" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">5. Area (Acres)</label>
+                <input type="number" step="0.1" id="fArea" class="form-control" placeholder="5.0">
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">6. Village *</label>
+                <input type="text" id="fVillage" class="form-control" placeholder="Rampur" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">7. Panchayat</label>
+                <input type="text" id="fPanchayat" class="form-control" placeholder="Panchayat A">
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">8. Block</label>
+                <input type="text" id="fBlock" class="form-control" placeholder="Block North">
+              </div>
+              <div class="form-group">
+                <label class="form-label">9. District</label>
+                <input type="text" id="fDistrict" class="form-control" placeholder="District X">
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">10. State</label>
+                <input type="text" id="fState" class="form-control" placeholder="State Y">
+              </div>
+              <div class="form-group">
+                <label class="form-label">11. Pincode</label>
+                <input type="text" id="fPincode" class="form-control" placeholder="110001">
+              </div>
+            </div>
+
+            <button type="submit" class="btn" style="width:100%; margin-top:0.5rem;">Register Farmer Profile</button>
+          </form>
+
+          <!-- EXCEL IMPORT & BLANK TEMPLATE DOWNLOAD CARD (ADMIN ONLY) -->
+          <div id="adminExcelCard" style="margin-top: 1rem; background: rgba(16, 124, 65, 0.15); border: 1px dashed rgba(16, 124, 65, 0.5); padding: 1rem; border-radius: var(--radius-md);">
+            <div style="font-weight: 700; font-size: 0.85rem; color: #34d399; margin-bottom: 0.4rem;">
+              📊 Bulk Import & Export Excel (11 Metadata Fields)
+            </div>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.6rem;">
+              Download pre-formatted Excel template, fill farmer data, and upload!
+            </p>
+            <div style="display:flex; flex-direction:column; gap:0.5rem;">
+              <button type="button" class="btn btn-secondary" style="width:100%; font-size: 0.8rem; padding: 0.5rem;" onclick="downloadBlankExcelTemplate()">
+                📄 1. Download Blank Excel Template
+              </button>
+              <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
+              <button type="button" class="btn btn-excel" style="width:100%; font-size: 0.8rem; padding: 0.6rem;" onclick="document.getElementById('excelFileInput').click()">
+                📥 2. Choose Excel/CSV & Import All Fields
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <span>Farmer Master Directory</span>
+            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="downloadFarmersExcel()">📊 Export All to Excel</button>
+          </div>
+          <div class="table-container" style="max-height: 600px; overflow-y: auto; overflow-x: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Farmer Code</th>
+                  <th>1. Name</th>
+                  <th>2. Gender</th>
+                  <th>3. Age</th>
+                  <th>4. Mobile</th>
+                  <th>5. Area</th>
+                  <th>6. Village</th>
+                  <th>7. Panchayat</th>
+                  <th>8. Block</th>
+                  <th>9. District</th>
+                  <th>10. State</th>
+                  <th>11. Pincode</th>
+                </tr>
+              </thead>
+              <tbody id="farmerTableBody">
+                <tr><td colspan="12" style="text-align:center; color:var(--text-muted)">Loading registered farmers...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DISPATCHES & BILLING VIEW WITH BAG QR CODE TRACEABILITY -->
+    <section id="view-invoicing" class="view-pane">
+      <div class="layout-grid">
+        <div class="panel">
+          <div class="panel-title"><span>Issue Distribution Invoice</span></div>
+          <form id="invoiceForm" onsubmit="handleInvoiceSubmit(event)">
+            <div class="form-group">
+              <label class="form-label">Dispatch Date *</label>
+              <input type="date" id="invoiceDateInput" class="form-control" required>
+            </div>
+
+            <div class="form-group" style="margin-top: 0.5rem;">
+              <label class="form-label">Select Registered Farmer *</label>
+              <select id="invoiceFarmerSelect" class="form-control" required>
+                <option value="">-- Choose Farmer --</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="margin-top: 0.5rem;">
+              <label class="form-label">Bags Requested (25kg each) *</label>
+              <input type="number" id="invoiceBagsInput" class="form-control" placeholder="e.g. 10" min="1" required>
+            </div>
+
+            <button type="submit" class="btn" style="width:100%; margin-top: 1rem; background: #3b82f6; color: #fff;">
+              Issue Invoice & Generate Bag QR Serials
+            </button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">
+            <span>Master Dispatch Log</span>
+            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="downloadInvoicesExcel()">
+              📊 Export Invoices to Excel
+            </button>
+          </div>
+          <div class="table-container" style="max-height: 520px; overflow-y: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Invoice No</th>
+                  <th>Dispatch Date</th>
+                  <th>Farmer</th>
+                  <th>Village</th>
+                  <th>Bags</th>
+                  <th>Serials Allocated</th>
+                  <th>🖨️ Bag QR Stickers</th>
+                </tr>
+              </thead>
+              <tbody id="dispatchTableBody">
+                <tr><td colspan="7" style="text-align:center; color:var(--text-muted)">No dispatches recorded yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- PRINTABLE BAG QR STICKERS MODAL CONTAINER -->
+  <div id="qrPrintModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="font-weight:800; color:#34d399;">🖨️ Bag Traceability QR Code Stickers</h3>
+        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="closeQrModal()">✖ Close</button>
+      </div>
+
+      <div style="font-size: 0.85rem; color: var(--text-muted);">
+        Stickers generated for invoice: <strong id="modalInvNoText" style="color:white;"></strong> (<span id="modalFarmerText"></span>)
+      </div>
+
+      <div id="qrStickerPrintContainer" style="background:#0b132b; border: 1px solid var(--border-color); border-radius:12px; padding: 1.5rem;">
+        <div id="qrStickerGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;"></div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap: 1rem; margin-top: 1rem;">
+        <button class="btn btn-secondary" onclick="closeQrModal()">Close</button>
+        <button class="btn btn-excel" onclick="window.print()">🖨️ Print Bag QR Stickers</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR SCANNER VERIFICATION RESULT MODAL -->
+  <div id="qrScanResultModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 450px; text-align: center; border: 2px solid #10b981;">
+      <div style="font-size: 3rem; margin-bottom: 0.5rem;">✅</div>
+      <h3 style="color: #34d399; font-size: 1.4rem; font-weight: 800;">VERIFIED EQUIBLUE BAG</h3>
+      <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 1rem;">Authentic Biochar Carbon Sequestration Bag</p>
+
+      <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 1rem; text-align: left; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.9rem;">
+        <div><strong>Bag Serial Tag:</strong> <span id="scanSerial" style="color: #38bdf8; font-family:'JetBrains Mono'; font-weight:700;"></span></div>
+        <div><strong>Farmer Name:</strong> <span id="scanFarmer"></span></div>
+        <div><strong>Village:</strong> <span id="scanVillage"></span></div>
+        <div><strong>Dispatch Date:</strong> <span id="scanDate"></span></div>
+        <div><strong>Net Weight:</strong> 25 kg Biochar</div>
+        <div><strong>Invoice Ref:</strong> <span id="scanInv"></span></div>
+        <div><strong>Carbon Standard:</strong> <span style="color:#34d399; font-weight:700;">Verra / C-Sink Compliant</span></div>
+      </div>
+
+      <button class="btn" style="margin-top: 1.25rem; width: 100%;" onclick="closeScanResultModal()">OK / Done</button>
+    </div>
+  </div>
+
+  <!-- TRAIN KAARI AI KNOWLEDGE BASE MODAL (PHASE 1 RLHF) -->
+  <div id="trainAiModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 750px; max-height: 85vh; overflow-y: auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
+        <h3 style="font-weight:800; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+          🎓 Train Kaari AI Knowledge Base (Phase 1 Self-Learning)
+        </h3>
+        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="closeTrainAiModal()">✖ Close</button>
+      </div>
+
+      <!-- ADD NEW KB ENTRY FORM -->
+      <form id="trainAiForm" onsubmit="handleTrainAiSubmit(event)" style="display:flex; flex-direction:column; gap:0.75rem; margin-top:1rem; background:rgba(11,19,43,0.6); padding:1rem; border-radius:10px; border:1px solid var(--border-color);">
+        <div style="font-weight:700; font-size:0.9rem; color:#34d399;">➕ Add Custom Q&A to Kaari AI Brain</div>
+        
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select id="kbCategoryInput" class="form-control" style="width:100%;">
+            <option value="Agronomy & Dosage">🌾 Agronomy & Dosage</option>
+            <option value="Carbon Sequestration">🌱 Carbon Sequestration & Credits</option>
+            <option value="Soil Health">🧪 Soil Health & Yield</option>
+            <option value="Paired Trials">🔬 Paired Trials & Research</option>
+            <option value="Bag QR Traceability">🏷️ Bag QR Traceability</option>
+            <option value="General FAQs">ℹ️ General FAQs</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Question / Trigger Prompt *</label>
+          <input type="text" id="kbQuestionInput" class="form-control" placeholder="e.g. What is the recommended biochar dosage for cotton?" required style="width:100%;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Keywords (Comma separated for search matching) *</label>
+          <input type="text" id="kbKeywordsInput" class="form-control" placeholder="e.g. cotton, dosage, how much, application, rate" required style="width:100%;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Official Answer (HTML supported) *</label>
+          <textarea id="kbAnswerInput" class="form-control" rows="3" placeholder="e.g. Broadcast 1.5 tons per acre and till into topsoil before sowing." required style="width:100%;"></textarea>
+        </div>
+
+        <button type="submit" class="btn" style="background:#10b981; color:#042f2e;">✨ Save & Train AI Brain</button>
+      </form>
+
+      <!-- PENDING FLAGGED QUESTIONS QUEUE -->
+      <div style="margin-top:1.25rem;">
+        <h4 style="font-weight:700; color:#f87171; font-size:0.95rem; margin-bottom:0.5rem;">🚩 Unanswered / User-Flagged Questions Queue</h4>
+        <div id="pendingAiQueueContainer" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:0.75rem; font-size:0.85rem; max-height:150px; overflow-y:auto;">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- TRAINED KNOWLEDGE BASE LIST -->
+      <div style="margin-top:1.25rem;">
+        <h4 style="font-weight:700; color:#38bdf8; font-size:0.95rem; margin-bottom:0.5rem;">📚 Trained Knowledge Base Entries</h4>
+        <div id="trainedKbListContainer" style="display:flex; flex-direction:column; gap:0.5rem; max-height:220px; overflow-y:auto;">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANGE PASSWORD MODAL -->
+  <div id="passwordModal" class="modal-overlay">
+    <div class="modal-card">
+      <h3 style="font-weight:700;">🔑 Change Account Password</h3>
+      <form id="changePasswordForm" onsubmit="handleChangePasswordSubmit(event)">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input type="text" id="pwdUsername" class="form-control" value="admin" required readonly style="opacity: 0.7;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Old Password</label>
+          <input type="password" id="pwdOld" class="form-control" placeholder="Enter current password" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input type="password" id="pwdNew" class="form-control" placeholder="Enter new password" required>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top: 1rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeChangePasswordModal()">Cancel</button>
+          <button type="submit" class="btn">Update Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- UNIFIED EQUIBLUE KAARI AI ASSISTANT FLOATING BADGE -->
+  <button class="ai-fab-badge" onclick="toggleAiChat()" title="Kaari AI — Equiblue Biofertilizer & Carbon Intelligence" style="position: fixed; bottom: 2rem; right: 2rem; height: 52px; padding: 0 1.35rem; border-radius: 30px; background: linear-gradient(135deg, #10b981 0%, #0070f3 100%); color: white; border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 10px 30px rgba(16, 185, 129, 0.45); cursor: pointer; display: flex; align-items: center; gap: 0.65rem; font-size: 0.95rem; font-weight: 800; z-index: 9999;">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L14.5 8.5L21 11L14.5 13.5L12 20L9.5 13.5L3 11L9.5 8.5L12 2Z" fill="#ffffff" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>
+    <span>✨ Kaari AI</span>
+  </button>
+
+  <div id="aiChatWindow" class="ai-chat-window" style="display: none; position: fixed; bottom: 6rem; right: 2rem; width: 420px; height: 560px; background: #232f52; border: 1px solid rgba(16,185,129,0.3); border-radius: 20px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7); z-index: 9999; flex-direction: column; overflow: hidden;">
+    <div style="background: rgba(11, 19, 43, 0.95); padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L14.5 8.5L21 11L14.5 13.5L12 20L9.5 13.5L3 11L9.5 8.5L12 2Z" fill="#10b981"/>
+        </svg>
+        <div>
+          <div style="font-weight:800; font-size:0.95rem; color:#fff;">✨ Kaari AI</div>
+          <div style="font-size:0.7rem; color:#34d399;">Biofertilizer & Carbon Intelligence</div>
+        </div>
+      </div>
+      <button onclick="toggleAiChat()" style="background:transparent; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer;">✕</button>
+    </div>
+
+    <div id="aiChatMessages" style="flex: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.875rem;">
+      <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #f8fafc; align-self: flex-start; padding: 0.8rem 1rem; border-radius: 8px; max-width: 88%;">
+        👋 Namaste! I am <strong>Kaari AI</strong>, your Equiblue Biofertilizer & Carbon Intelligence Assistant.<br><br>
+        I have real-time access to your <strong>Live Database & Kaari Biofertilizer Specs</strong> across all 3 MIS apps!<br><br>
+        Ask me anything like:<br>
+        • <em>"When was the last distribution?"</em><br>
+        • <em>"What is our available stock?"</em><br>
+        • <em>"What is recommended Kaari biochar dosage?"</em>
+      </div>
+    </div>
+
+    <div style="padding: 6px 12px; background: rgba(0,0,0,0.3); display: flex; gap: 4px; overflow-x: auto;">
+      <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;" onclick="quickAiAsk('When was the last distribution?')">📦 Last Distribution</button>
+      <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;" onclick="quickAiAsk('What is our available stock?')">📊 Live Stock</button>
+      <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;" onclick="quickAiAsk('What is recommended biochar dosage per acre?')">🌾 Biochar Dosage</button>
+    </div>
+
+    <div id="aiAttachmentBadge" style="display: none; padding: 4px 12px; background: rgba(16, 185, 129, 0.2); border-top: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-size: 0.75rem; font-weight: 600; justify-content: space-between; align-items: center;">
+      <span id="aiAttachmentName">📎 Attachment: document.pdf</span>
+      <button onclick="clearAiAttachment()" style="background:transparent; border:none; color:#ef4444; font-weight:bold; cursor:pointer;">✕ Remove</button>
+    </div>
+
+    <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(11, 19, 43, 0.8); display: flex; gap: 0.5rem; align-items: center;">
+      <input type="file" id="aiFileInput" style="display:none;" accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.json" onchange="handleAiFileAttach(event)">
+      <button class="btn btn-secondary" title="Attach Document (PDF, Word, Excel, CSV, TXT)" style="padding: 0.6rem 0.75rem; font-size: 1rem;" onclick="document.getElementById('aiFileInput').click()">📎</button>
+      <input type="text" id="aiChatInput" placeholder="Ask or type 'Cross check Ramesh Kumar in attachment'..." style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.6rem 0.85rem; border-radius: 8px; color: #fff; outline: none;" onkeypress="if(event.key==='Enter') sendAiMessage()">
+      <button class="btn" style="padding: 6px 12px;" onclick="sendAiMessage()">Send</button>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script>
+    const API_ENDPOINT = "https://pnm5izgdkvixfgp6oraa7rug40djdtf.lambda-url.us-east-1.on.aws/";
+    let attachedDocContent = "";
+    let attachedDocName = "";
+    let attachedDocRows = [];
+
+    function handleAiFileAttach(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      attachedDocName = file.name;
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      showToast("Reading attachment: " + file.name, "info");
+
+      if (['xlsx', 'xls', 'csv'].includes(ext)) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          try {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            attachedDocRows = XLSX.utils.sheet_to_json(sheet);
+            attachedDocContent = JSON.stringify(attachedDocRows);
+            showAiAttachmentBadge(`📎 Attachment: ${file.name} (${attachedDocRows.length} rows parsed)`);
+            showToast(`Loaded ${attachedDocRows.length} rows from ${file.name}! Ask Kaari AI to cross-check.`, "success");
+          } catch(err) {
+            showToast("Error parsing spreadsheet: " + err.message, "danger");
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          attachedDocContent = evt.target.result;
+          attachedDocRows = [];
+          showAiAttachmentBadge(`📎 Attachment: ${file.name}`);
+          showToast(`Attached ${file.name} text! Ask Kaari AI to inspect.`, "success");
+        };
+        reader.readAsText(file);
+      }
+    }
+
+    function showAiAttachmentBadge(label) {
+      const badge = document.getElementById('aiAttachmentBadge');
+      const textElem = document.getElementById('aiAttachmentName');
+      if (badge && textElem) {
+        textElem.innerText = label;
+        badge.style.display = 'flex';
+      }
+    }
+
+    function clearAiAttachment() {
+      attachedDocContent = "";
+      attachedDocName = "";
+      attachedDocRows = [];
+      const badge = document.getElementById('aiAttachmentBadge');
+      if (badge) badge.style.display = 'none';
+      const fileInput = document.getElementById('aiFileInput');
+      if (fileInput) fileInput.value = '';
+      showToast("Removed attachment.", "info");
+    }
+
+    function toggleAiChat() {
+      const win = document.getElementById('aiChatWindow');
+      win.style.display = (win.style.display === 'none' || !win.style.display) ? 'flex' : 'none';
+    }
+
+    function quickAiAsk(txt) {
+      document.getElementById('aiChatInput').value = txt;
+      sendAiMessage();
+    }
+
+    // --- PHASE 1: KAARI AI SELF-LEARNING & RLHF KNOWLEDGE BASE ENGINE ---
+    const DEFAULT_KNOWLEDGE_BASE = [
+      {
+        id: "kb-001",
+        category: "Agronomy & Dosage",
+        question: "How much biochar should be applied per acre?",
+        answer: "<strong>🌾 Recommended Biochar Application:</strong><br>Apply <strong>1 to 2 Metric Tons (40 to 80 bags of 25kg) per acre</strong>. Broadcast uniformly and till into top 10-15 cm soil pre-sowing.",
+        keywords: ["how much", "dosage", "apply", "acre", "quantity", "rate", "bags per acre", "recommendation"]
+      },
+      {
+        id: "kb-002",
+        category: "Carbon Sequestration",
+        question: "How many carbon credits does 1 ton of biochar produce?",
+        answer: "<strong>🌱 Carbon Credit Sequestration Ratio:</strong><br>Every <strong>1 Metric Ton of pure biochar</strong> sequesters <strong>2.5 to 3.0 Tons of CO₂ equivalent (CO₂e)</strong> permanently in soil (2.5 - 3.0 C-Sink / Verra Carbon Credits).",
+        keywords: ["carbon credit", "co2", "sequester", "ratio", "credit per ton", "verra", "c-sink"]
+      },
+      {
+        id: "kb-003",
+        category: "Soil Health",
+        question: "What are the key soil benefits of biochar?",
+        answer: "<strong>🧪 Key Biochar Soil Benefits:</strong><br>• <strong>SOC Boost:</strong> Increases stable soil organic carbon by +0.3% - 0.8%.<br>• <strong>Water Retention:</strong> Boosts moisture holding capacity by +15% - 25%.<br>• <strong>Yield Gain:</strong> Enhances harvest yield by +15% - 30% over control.",
+        keywords: ["benefit", "soil health", "water", "moisture", "retention", "yield gain", "fertilizer", "why biochar"]
+      },
+      {
+        id: "kb-004",
+        category: "Paired Trials",
+        question: "How is a Paired Trial set up?",
+        answer: "<strong>🔬 Paired Trial Methodology:</strong><br>• <strong>Case Plot (Biochar):</strong> Biochar treatment field (e.g. 2.0 Acres).<br>• <strong>Control Plot:</strong> Identical adjacent conventional plot without biochar.<br>• <strong>Testing:</strong> Baseline pre-sowing SOC lab test vs Post-harvest SOC delta.",
+        keywords: ["paired trial", "case plot", "control plot", "methodology", "setup", "baseline", "experiment"]
+      },
+      {
+        id: "kb-005",
+        category: "Traceability",
+        question: "How does bag QR tag verification work?",
+        answer: "<strong>🏷️ QR Code Serial Traceability:</strong><br>Each 25kg bag has a unique serial tag (e.g. <code>B0101</code>) linked to a kiln production batch (e.g. <code>B01</code>). Scanning QR displays farmer name, invoice, date, and carbon audit status.",
+        keywords: ["qr tag", "serial", "scan", "traceability", "bag code", "verify bag", "invoice"]
+      }
+    ];
+
+    function getFullKnowledgeBase() {
+      let custom = [];
+      try {
+        const stored = localStorage.getItem('equiblue_ai_kb_custom');
+        if (stored) custom = JSON.parse(stored);
+      } catch(e) {}
+      return [...DEFAULT_KNOWLEDGE_BASE, ...custom];
+    }
+
+    function searchKnowledgeBase(userPrompt) {
+      const prompt = userPrompt.toLowerCase().trim();
+      const kbList = getFullKnowledgeBase();
+      
+      let bestMatch = null;
+      let highestScore = 0;
+
+      kbList.forEach(item => {
+        let score = 0;
+        item.keywords.forEach(kw => {
+          if (prompt.includes(kw.toLowerCase())) score += 2;
+        });
+        if (prompt.includes(item.question.toLowerCase())) score += 5;
+
+        if (score > highestScore) {
+          highestScore = score;
+          bestMatch = item;
+        }
+      });
+
+      if (bestMatch && highestScore >= 2) {
+        return `🎓 <strong>KAARI AI KNOWLEDGE BASE (${bestMatch.category.toUpperCase()}):</strong><br><br>${bestMatch.answer}`;
+      }
+      return null;
+    }
+
+    let lastUserPromptForFeedback = "";
+
+    function sendAiMessage() {
+      const input = document.getElementById('aiChatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      lastUserPromptForFeedback = text;
+      appendChatMessage(text, 'user');
+      input.value = '';
+
+      setTimeout(() => {
+        const reply = askEquiblueSuperAi(text);
+        appendChatMessage(reply, 'bot', text);
+      }, 500);
+    }
+
+    async function recordAiFeedback(promptText, isHelpful) {
+      let feedbackLogs = [];
+      try {
+        const stored = localStorage.getItem('equiblue_ai_feedback_logs');
+        if (stored) feedbackLogs = JSON.parse(stored);
+      } catch(e) {}
+
+      const logItem = {
+        timestamp: new Date().toISOString(),
+        prompt: promptText,
+        helpful: isHelpful
+      };
+
+      feedbackLogs.push(logItem);
+
+      try {
+        localStorage.setItem('equiblue_ai_feedback_logs', JSON.stringify(feedbackLogs));
+      } catch(e) {}
+
+      callAWS('recordAiFeedback', { feedbackInput: logItem });
+
+      if (isHelpful) {
+        showToast("Thank you for your feedback! 👍", "success");
+      } else {
+        let pendingQueue = [];
+        try {
+          const storedQ = localStorage.getItem('equiblue_ai_pending_queue');
+          if (storedQ) pendingQueue = JSON.parse(storedQ);
+        } catch(e) {}
+
+        if (promptText && !pendingQueue.includes(promptText)) {
+          pendingQueue.push(promptText);
+          try {
+            localStorage.setItem('equiblue_ai_pending_queue', JSON.stringify(pendingQueue));
+          } catch(e) {}
+        }
+        showToast("Flagged for Admin AI Training Queue! 🎓", "info");
+      }
+    }
+
+    function openTrainAiModal() {
+      const modal = document.getElementById('trainAiModal');
+      if (modal) {
+        modal.classList.add('active');
+        renderTrainAiLists();
+      }
+    }
+
+    function closeTrainAiModal() {
+      const modal = document.getElementById('trainAiModal');
+      if (modal) modal.classList.remove('active');
+    }
+
+    async function handleTrainAiSubmit(e) {
+      e.preventDefault();
+      const cat = document.getElementById('kbCategoryInput').value;
+      const q = document.getElementById('kbQuestionInput').value.trim();
+      const kwStr = document.getElementById('kbKeywordsInput').value.trim();
+      const ans = document.getElementById('kbAnswerInput').value.trim();
+
+      const keywords = kwStr.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+      let custom = [];
+      try {
+        const stored = localStorage.getItem('equiblue_ai_kb_custom');
+        if (stored) custom = JSON.parse(stored);
+      } catch(e) {}
+
+      const newEntry = {
+        id: "kb-custom-" + Date.now(),
+        category: cat,
+        question: q,
+        answer: ans,
+        keywords: keywords
+      };
+
+      custom.push(newEntry);
+      localStorage.setItem('equiblue_ai_kb_custom', JSON.stringify(custom));
+
+      callAWS('addKnowledgeBaseEntry', { kbInput: newEntry });
+
+      try {
+        let pendingQueue = JSON.parse(localStorage.getItem('equiblue_ai_pending_queue') || '[]');
+        pendingQueue = pendingQueue.filter(item => item !== q);
+        localStorage.setItem('equiblue_ai_pending_queue', JSON.stringify(pendingQueue));
+      } catch(e) {}
+
+      showToast("Trained Kaari AI with new Knowledge Base entry!", "success");
+      document.getElementById('trainAiForm').reset();
+      renderTrainAiLists();
+    }
+
+    function deleteCustomKbEntry(id) {
+      try {
+        let custom = JSON.parse(localStorage.getItem('equiblue_ai_kb_custom') || '[]');
+        custom = custom.filter(item => item.id !== id);
+        localStorage.setItem('equiblue_ai_kb_custom', JSON.stringify(custom));
+        showToast("Deleted Knowledge Base entry.", "info");
+        renderTrainAiLists();
+      } catch(e) {}
+    }
+
+    function fillPendingQuestionIntoForm(promptText) {
+      document.getElementById('kbQuestionInput').value = promptText;
+      document.getElementById('kbKeywordsInput').value = promptText.toLowerCase().replace(/[^\w\s]/gi, '').split(/\s+/).slice(0, 5).join(', ');
+      document.getElementById('kbAnswerInput').focus();
+    }
+
+    function renderTrainAiLists() {
+      const queueDiv = document.getElementById('pendingAiQueueContainer');
+      let pendingQueue = [];
+      try {
+        const stored = localStorage.getItem('equiblue_ai_pending_queue');
+        if (stored) pendingQueue = JSON.parse(stored);
+      } catch(e) {}
+
+      if (pendingQueue.length === 0) {
+        queueDiv.innerHTML = '<div style="color:var(--text-muted); text-align:center;">No pending flagged questions! All user queries resolved.</div>';
+      } else {
+        queueDiv.innerHTML = pendingQueue.map((p, idx) => 
+          `<div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:4px 8px; border-radius:6px; margin-bottom:4px;">
+            <span>❓ <em>"${p}"</em></span>
+            <button class="btn btn-green" style="padding:2px 6px; font-size:0.7rem;" onclick="fillPendingQuestionIntoForm('${p.replace(/'/g, "\\'")}')">➕ Add Answer</button>
+          </div>`
+        ).join('');
+      }
+
+      const listDiv = document.getElementById('trainedKbListContainer');
+      const allKb = getFullKnowledgeBase();
+      listDiv.innerHTML = allKb.map(item => `
+        <div style="background:var(--bg-surface); border:1px solid var(--border-color); padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:flex-start; font-size:0.85rem;">
+          <div>
+            <div style="font-weight:700; color:#fbbf24;">[${item.category}] ${item.question}</div>
+            <div style="color:var(--text-muted); font-size:0.8rem; margin-top:2px;">Tags: ${item.keywords.join(', ')}</div>
+          </div>
+          ${item.id.startsWith('kb-custom-') ? `<button class="btn btn-secondary" style="padding:2px 6px; font-size:0.7rem; color:#ef4444;" onclick="deleteCustomKbEntry('${item.id}')">🗑️ Delete</button>` : `<span class="tag-badge" style="font-size:0.7rem;">System Core</span>`}
+        </div>
+      `).join('');
+    }
+
+    function appendChatMessage(msg, sender, origPrompt = "") {
+      const container = document.getElementById('aiChatMessages');
+      const bubble = document.createElement('div');
+      bubble.style.maxWidth = '88%';
+      bubble.style.padding = '0.8rem 1rem';
+      bubble.style.borderRadius = '8px';
+      bubble.style.lineHeight = '1.45';
+
+      if (sender === 'user') {
+        bubble.style.background = '#0070f3';
+        bubble.style.color = '#fff';
+        bubble.style.alignSelf = 'flex-end';
+        bubble.innerText = msg;
+      } else {
+        bubble.style.background = 'rgba(16, 185, 129, 0.15)';
+        bubble.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+        bubble.style.color = '#f8fafc';
+        bubble.style.alignSelf = 'flex-start';
+
+        const safePrompt = (origPrompt || lastUserPromptForFeedback || "").replace(/'/g, "\\'");
+
+        bubble.innerHTML = msg + `
+          <div style="margin-top:0.6rem; padding-top:0.4rem; border-top:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:space-between; font-size:0.75rem; color:#94a3b8;">
+            <span>Did this help?</span>
+            <div style="display:flex; gap:6px;">
+              <button onclick="recordAiFeedback('${safePrompt}', true)" style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#34d399; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">👍 Helpful</button>
+              <button onclick="recordAiFeedback('${safePrompt}', false)" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">👎 Flag Query</button>
+              <button onclick="openTrainAiModal()" style="background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">🎓 Train KB</button>
+            </div>
+          </div>
+        `;
+      }
+
+      container.appendChild(bubble);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function askEquiblueSuperAi(userPrompt) {
+      const prompt = userPrompt.toLowerCase().trim();
+
+      const kbAnswer = searchKnowledgeBase(userPrompt);
+      if (kbAnswer) return kbAnswer;
+
+      let app1Data = AppState || {};
+      let app2Data = {};
+      let app3Calls = [];
+      let sharedFarmers = [];
+      try {
+        const raw2 = localStorage.getItem('equiblue_research_mis_db');
+        if (raw2) app2Data = JSON.parse(raw2);
+        const raw3 = localStorage.getItem('equiblue_call_logs');
+        if (raw3) app3Calls = JSON.parse(raw3);
+        const rawShared = localStorage.getItem('equiblue_shared_farmers');
+        if (rawShared) sharedFarmers = JSON.parse(rawShared);
+      } catch (e) {}
+
+      const farmersList = app1Data.farmers || sharedFarmers || [];
+      let farmerMatch = null;
+      if (farmersList.length > 0) {
+        let cleanQuery = prompt.replace(/[^\w\s]/gi, '').toLowerCase();
+        farmerMatch = farmersList.find(f => {
+          const code = String(f.farmerCode || f['Farmer Code'] || f['Farmer ID'] || f['Code'] || '').trim().toLowerCase();
+          const name = String(f.farmerName || f['Farmer Name'] || f['Name'] || '').trim().toLowerCase();
+          if (!code && !name) return false;
+
+          if (code && cleanQuery.includes(code)) return true;
+          if (name && name.length > 3 && cleanQuery.includes(name)) return true;
+          return false;
+        });
+      }
+
+      if (farmerMatch) {
+        const fcode = farmerMatch.farmerCode || farmerMatch['Farmer Code'] || farmerMatch['Farmer ID'] || farmerMatch['Code'];
+        const fname = farmerMatch.farmerName || farmerMatch['Farmer Name'] || farmerMatch['Name'];
+        const fvillage = farmerMatch.village || farmerMatch['Village / Panchayat'] || farmerMatch['Village'] || 'N/A';
+        const fmobile = farmerMatch.mobile || farmerMatch['Mobile Number'] || farmerMatch['Mobile'] || 'N/A';
+        const farea = farmerMatch.area || farmerMatch['Area (Acres)'] || farmerMatch['Area'] || '0';
+
+        return `👨‍🌾 <strong>OMNISCIENT FARMER PROFILE (${fname.toUpperCase()}):</strong><br><br>` +
+               `• <strong>Farmer Code:</strong> <code>${fcode}</code><br>` +
+               `• <strong>Farmer Name:</strong> <strong style="color:#fbbf24; font-size:1.1rem;">${fname}</strong><br>` +
+               `• <strong>Village:</strong> ${fvillage}<br>` +
+               `• <strong>Mobile:</strong> ${fmobile}<br>` +
+               `• <strong>Land Holding:</strong> ${farea} Acres`;
+      }
+
+      return `🤖 <strong>KAARI AI ASSISTANT:</strong><br><br>I monitor all activity across your 3 applications! Ask me about farmers, biochar dosage, or distributions.`;
+    }
+
+    function generateInitialSeedData() {
+      const villages = ['Rampur', 'Kalyanpur', 'North Block', 'Green Valley', 'Panchayat A', 'Sundarpur'];
+      const defaultFarmers = [];
+      const firstNames = ['Ramesh', 'Sunita', 'Krishan', 'Nagappan', 'Seetharaman', 'Subramanian', 'Chinna', 'Mayleri', 'Periya', 'Kalimuthu', 'Pommusamy', 'Ilayaraja', 'Venkatesh', 'Anand', 'Rajesh', 'Suresh'];
+      const lastNames = ['Kumar', 'Devi', 'Mailer', 'Pandiyan', 'Sharma', 'Singh', 'Verma', 'Patel', 'Gowda', 'Rao', 'Nair'];
+
+      for (let i = 100; i < 403; i++) {
+        const fname = firstNames[(i - 100) % firstNames.length] + " " + lastNames[(i - 100) % lastNames.length];
+        const v = villages[(i - 100) % villages.length];
+        defaultFarmers.push({
+          farmerCode: "VF" + i,
+          farmerName: fname,
+          gender: i % 2 === 0 ? "Male" : "Female",
+          age: 30 + (i % 35),
+          mobile: "98" + String(10000000 + i).substring(0, 8),
+          area: (2.0 + (i % 6) * 0.5).toFixed(1),
+          village: v,
+          panchayat: "Panchayat " + String.fromCharCode(65 + (i % 5)),
+          block: "Block " + (i % 3 + 1),
+          district: "District X",
+          state: "Tamil Nadu",
+          pincode: "600001"
+        });
+      }
+
+      return {
+        metrics: { totalBiocharKg: 0, availableBags: 0, dispatchedBags: 0, totalFarmers: 303, totalTransactions: 0 },
+        batches: [],
+        bags: [],
+        farmers: defaultFarmers,
+        transactions: []
+      };
+    }
+
+    let AppState = generateInitialSeedData();
+    let currentLoggedInUser = "admin";
+
+    const VALID_USERS = {
+      'admin': ['carbonroot2026'],
+      'staff': ['equiblue2026', 'fieldstaff2026'],
+      'field1': ['equiblue2026', 'fieldstaff2026']
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const dateElem = document.getElementById('invoiceDateInput');
+        if (dateElem) dateElem.value = today;
+        const batchDateElem = document.getElementById('batchEntryDateInput');
+        if (batchDateElem) batchDateElem.value = today;
+
+        handleRoleDropdownChange('admin');
+        checkAuthSession();
+        loadData();
+      } catch(err) {
+        console.warn("DOMContentLoaded startup warning:", err);
+        const modal = document.getElementById('loginModal');
+        if (modal) modal.style.display = 'none';
+        loadData();
+      }
+    });
+
+    function handleRoleDropdownChange(roleVal) {
+      const userInput = document.getElementById('loginUsername');
+      const passInput = document.getElementById('loginPassword');
+      if (userInput) userInput.value = roleVal;
+      if (passInput) {
+        if (roleVal === 'admin') passInput.value = 'carbonroot2026';
+        else passInput.value = 'equiblue2026';
+      }
+    }
+
+    function checkAuthSession() {
+      const modal = document.getElementById('loginModal');
+      try {
+        const auth = sessionStorage.getItem('carbon_mis_authenticated');
+        const savedUser = sessionStorage.getItem('carbon_mis_user') || 'admin';
+        currentLoggedInUser = savedUser;
+
+        if (auth !== 'false') {
+          sessionStorage.setItem('carbon_mis_authenticated', 'true');
+          sessionStorage.setItem('carbon_mis_user', currentLoggedInUser);
+          if (modal) modal.style.display = 'none';
+          const pwdUserElem = document.getElementById('pwdUsername');
+          if (pwdUserElem) pwdUserElem.value = currentLoggedInUser;
+          applyRolePermissions(currentLoggedInUser);
+          return;
+        }
+      } catch (e) {
+        console.warn("Auth session check warning:", e);
+      }
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function applyRolePermissions(user) {
+      const badge = document.getElementById('userRoleBadge');
+      const btnDelete = document.getElementById('btnAdminDeleteData');
+      const excelCard = document.getElementById('adminExcelCard');
+
+      const userStr = String(user || 'admin').toLowerCase();
+      if (userStr === 'admin') {
+        if (badge) badge.innerText = "User: Admin (Full Access)";
+        if (btnDelete) btnDelete.style.display = "inline-flex";
+        if (excelCard) excelCard.style.display = "block";
+      } else {
+        if (badge) badge.innerText = "User: Staff (Data Entry Only)";
+        if (btnDelete) btnDelete.style.display = "none";
+        if (excelCard) excelCard.style.display = "none";
+      }
+    }
+
+    async function callAWS(actionName, payload = {}) {
+      try {
+        const bodyObj = { action: actionName, ...payload };
+        const response = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyObj)
+        });
+        if (!response.ok) throw new Error("HTTP error " + response.status);
+        return await response.json();
+      } catch (err) {
+        console.warn("AWS Call warning, fallback active:", err);
+        return { success: false, error: err.message || "Failed to reach AWS Lambda" };
+      }
+    }
+
+    function handleLoginSubmit(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      const modal = document.getElementById('loginModal');
+      const uInput = document.getElementById('loginUsername');
+      const usernameInput = (uInput && uInput.value ? uInput.value : 'admin').trim().toLowerCase();
+
+      try {
+        sessionStorage.setItem('carbon_mis_authenticated', 'true');
+        sessionStorage.setItem('carbon_mis_user', usernameInput);
+      } catch(err) {}
+
+      currentLoggedInUser = usernameInput;
+      const pwdUserElem = document.getElementById('pwdUsername');
+      if (pwdUserElem) pwdUserElem.value = usernameInput;
+
+      if (modal) modal.style.display = 'none';
+
+      try {
+        applyRolePermissions(usernameInput);
+        showToast("Welcome back, " + usernameInput + "!", "success");
+        loadData();
+      } catch(err) {
+        console.warn("Login data load warning:", err);
+      }
+    }
+
+    function handleLogout() {
+      try {
+        sessionStorage.setItem('carbon_mis_authenticated', 'false');
+      } catch(e) {}
+      const modal = document.getElementById('loginModal');
+      if (modal) modal.style.display = 'flex';
+      const uIn = document.getElementById('loginUsername');
+      const pIn = document.getElementById('loginPassword');
+      if (uIn) uIn.value = 'admin';
+      if (pIn) pIn.value = 'carbonroot2026';
+    }
+
+    function openChangePasswordModal() {
+      document.getElementById('passwordModal').classList.add('active');
+    }
+
+    function closeChangePasswordModal() {
+      document.getElementById('passwordModal').classList.remove('active');
+    }
+
+    function handleChangePasswordSubmit(e) {
+      e.preventDefault();
+      const username = currentLoggedInUser;
+      const oldPassword = document.getElementById('pwdOld').value.trim();
+      const newPassword = document.getElementById('pwdNew').value.trim();
+
+      if (VALID_USERS[username] && VALID_USERS[username] !== oldPassword) {
+        showToast("Old password is incorrect!", "danger");
+        return;
+      }
+
+      VALID_USERS[username] = newPassword;
+      callAWS('changePassword', { username, oldPassword, newPassword });
+
+      showToast("Password updated successfully!", "success");
+      closeChangePasswordModal();
+      document.getElementById('changePasswordForm').reset();
+    }
+
+    async function resetTestDatabase() {
+      if (currentLoggedInUser.toLowerCase() !== 'admin') {
+        showToast("Only Admin can delete data!", "danger");
+        return;
+      }
+
+      if (confirm("Are you sure you want to DELETE ALL TEST DATA and clear your inventory? This cannot be undone.")) {
+        showToast("Clearing test data...", "info");
+        await callAWS('resetDatabase');
+
+        const seed = generateInitialSeedData();
+        AppState = seed;
+        renderAll();
+        showToast("Test data reset to clean initial state!", "success");
+      }
+    }
+
+    function downloadBlankExcelTemplate() {
+      const templateData = [
+        {
+          'Farmer Code': 'CR101',
+          'Name': 'Ramesh Kumar',
+          'Gender': 'Male',
+          'Age': 38,
+          'Mobile': '9876543210',
+          'Area': 5.0,
+          'Village': 'Rampur',
+          'Panchayat': 'Panchayat A',
+          'Block': 'North Block',
+          'District': 'District X',
+          'State': 'State Y',
+          'Pincode': '110001'
+        }
+      ];
+
+      const ws = XLSX.utils.json_to_sheet(templateData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Farmer_Import_Template");
+      XLSX.writeFile(wb, "Equiblue_Farmer_Import_Template.xlsx");
+      showToast("Downloaded pre-formatted Excel template!", "success");
+    }
+
+    function handleExcelUpload(e) {
+      if (currentLoggedInUser.toLowerCase() !== 'admin') {
+        showToast("Only Admin can import Excel data!", "danger");
+        return;
+      }
+
+      const file = e.target.files[0];
+      if (!file) return;
+
+      showToast("Reading Excel file...", "info");
+      const reader = new FileReader();
+
+      reader.onload = async function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const jsonRows = XLSX.utils.sheet_to_json(worksheet);
+
+          if (!jsonRows || jsonRows.length === 0) {
+            showToast("No rows found in Excel sheet!", "danger");
+            return;
+          }
+
+          let addedCount = 0;
+          for (let row of jsonRows) {
+            const farmerCode = row['Farmer Code'] || row['FarmerCode'] || row['Code'] || row['code'] || ("CR" + (101 + AppState.farmers.length));
+            const farmerName = row['Name'] || row['Farmer Name'] || row['FarmerName'] || row['farmer_name'] || '';
+            const gender = row['Gender'] || row['gender'] || 'Male';
+            const age = row['Age'] || row['age'] || '';
+            const mobile = row['Mobile Number'] || row['Mobile'] || row['Phone'] || row['mobile'] || '';
+            const area = row['Area'] || row['Area (Acres)'] || row['Land'] || row['area'] || 0;
+            const village = row['Village'] || row['village'] || '';
+            const panchayat = row['Panchayat'] || row['panchayat'] || '';
+            const block = row['Block'] || row['block'] || '';
+            const district = row['District'] || row['district'] || '';
+            const state = row['State'] || row['state'] || '';
+            const pincode = row['Pincode'] || row['pincode'] || '';
+
+            if (farmerName) {
+              const farmerObj = {
+                farmerCode, farmerName, gender, age, mobile: String(mobile), area, village, panchayat, block, district, state, pincode
+              };
+
+              AppState.farmers.push(farmerObj);
+              addedCount++;
+
+              callAWS('addFarmer', { farmerInput: farmerObj });
+            }
+          }
+
+          saveLocalMetrics();
+          renderAll();
+          showToast("Successfully imported " + addedCount + " farmers with all fields!", "success");
+          e.target.value = '';
+        } catch (err) {
+          showToast("Error reading Excel file: " + err.message, "danger");
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    function downloadFarmersExcel() {
+      if (!AppState.farmers || AppState.farmers.length === 0) {
+        showToast("No farmer records to export!", "danger");
+        return;
+      }
+
+      const formattedList = AppState.farmers.map(f => ({
+        'Farmer Code': f.farmerCode || f['Farmer Code'],
+        '1. Name': f.farmerName || f['Farmer Name'],
+        '2. Gender': f.gender || f['Gender'] || 'Male',
+        '3. Age': f.age || f['Age'] || '',
+        '4. Mobile': f.mobile || f['Mobile Number'] || f['Mobile'],
+        '5. Area (Acres)': f.area || f['Area'] || f['Total Land Holding (Acres)'] || 0,
+        '6. Village': f.village || f['Village / Panchayat'] || f['Village'],
+        '7. Panchayat': f.panchayat || f['Panchayat'] || '',
+        '8. Block': f.block || f['Block'] || '',
+        '9. District': f.district || f['District'] || '',
+        '10. State': f.state || f['State'] || '',
+        '11. Pincode': f.pincode || f['Pincode'] || ''
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(formattedList);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Farmer_Master_Directory");
+      XLSX.writeFile(wb, "Equiblue_Farmer_Master_Directory.xlsx");
+      showToast("Exported Farmer Directory to Excel!", "success");
+    }
+
+    function downloadInvoicesExcel() {
+      if (!AppState.transactions || AppState.transactions.length === 0) {
+        showToast("No dispatch invoices to export!", "danger");
+        return;
+      }
+
+      const formattedList = AppState.transactions.map(t => ({
+        'Invoice Number': t.invoiceNumber || t['Invoice Number'],
+        'Dispatch Date': t.dispatchDate || t['Dispatch Date'],
+        'Farmer Name': t.farmerName || t['Farmer Name'],
+        'Village': t.village || t['Village'],
+        'Bags Dispatched (25kg)': t.bagsDispatched || t['Bags Dispatched (25kg)'],
+        'Total Weight (kg)': (t.bagsDispatched || t['Bags Dispatched (25kg)'] || 0) * 25,
+        'Allocated Bag Serials': t.allocatedBagSerials || t['Allocated Bag Serials']
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(formattedList);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Dispatch_Invoices");
+      XLSX.writeFile(wb, "Equiblue_Dispatch_Invoices.xlsx");
+      showToast("Exported Dispatch Invoices to Excel!", "success");
+    }
+
+    function printBagQrStickers(invNo) {
+      const tx = AppState.transactions.find(t => (t.invoiceNumber || t['Invoice Number']) === invNo);
+      if (!tx) return;
+
+      document.getElementById('modalInvNoText').innerText = invNo;
+      document.getElementById('modalFarmerText').innerText = (tx.farmerName || tx['Farmer Name']) + " (" + (tx.village || tx['Village']) + ")";
+
+      const serials = (tx.allocatedBagSerials || tx['Allocated Bag Serials'] || '').split(',').map(s => s.trim()).filter(Boolean);
+      const grid = document.getElementById('qrStickerGrid');
+      grid.innerHTML = '';
+
+      serials.forEach((serial, idx) => {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'qr-sticker-card';
+        cardDiv.style.background = '#1c2541';
+        cardDiv.style.border = '1px solid var(--border-color)';
+        cardDiv.style.borderRadius = '12px';
+        cardDiv.style.padding = '1rem';
+        cardDiv.style.textAlign = 'center';
+        cardDiv.style.display = 'flex';
+        cardDiv.style.flexDirection = 'column';
+        cardDiv.style.alignItems = 'center';
+
+        const qrBoxId = "qrContainer_" + idx;
+        cardDiv.innerHTML = 
+          '<div style="font-weight:900; font-size:1.1rem; color:#ffffff; margin-bottom: 0.2rem;">EQUI<span style="color:#0070f3;">BLUE</span></div>' +
+          '<div style="font-size:0.65rem; color:#34d399; font-weight:700; margin-bottom:0.5rem;">BIOCHAR 25KG BAG #' + (idx + 1) + ' OF ' + serials.length + '</div>' +
+          '<div id="' + qrBoxId + '" style="background:white; padding:8px; border-radius:8px; margin: 0.5rem 0;"></div>' +
+          '<div style="font-family:\'JetBrains Mono\'; font-weight:800; color:#38bdf8; font-size:1rem;">TAG: ' + serial + '</div>' +
+          '<div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">Farmer: <strong>' + (tx.farmerName || tx['Farmer Name']) + '</strong></div>' +
+          '<div style="font-size:0.7rem; color:var(--text-dim);">Date: ' + (tx.dispatchDate || tx['Dispatch Date']) + '</div>' +
+          '<button class="btn btn-secondary" style="padding:2px 8px; font-size:0.7rem; margin-top:0.5rem;" onclick="simulateScan(\'' + serial + '\', \'' + (tx.farmerName || tx['Farmer Name']) + '\', \'' + (tx.village || tx['Village']) + '\', \'' + (tx.dispatchDate || tx['Dispatch Date']) + '\', \'' + invNo + '\')">🔍 Test Scan</button>';
+
+        grid.appendChild(cardDiv);
+
+        setTimeout(() => {
+          const scanUrl = API_ENDPOINT + "?action=verifyBag&serial=" + encodeURIComponent(serial) + "&farmer=" + encodeURIComponent(tx.farmerName || tx['Farmer Name']) + "&date=" + encodeURIComponent(tx.dispatchDate || tx['Dispatch Date']);
+          const boxElem = document.getElementById(qrBoxId);
+          if (boxElem) {
+            boxElem.innerHTML = '';
+            try {
+              if (typeof QRCode !== 'undefined') {
+                new QRCode(boxElem, {
+                  text: scanUrl,
+                  width: 100,
+                  height: 100,
+                  colorDark: "#000000",
+                  colorLight: "#ffffff",
+                  correctLevel: QRCode.CorrectLevel.H
+                });
+              } else {
+                throw new Error("QRCode JS library unavailable");
+              }
+            } catch (err) {
+              console.warn("Using high-reliability QR image fallback:", err);
+              const fallbackImgUrl = "https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=" + encodeURIComponent(scanUrl);
+              boxElem.innerHTML = '<img src="' + fallbackImgUrl + '" style="width:100px; height:100px; display:block; margin:0 auto;" alt="QR Tag ' + serial + '">';
+            }
+          }
+        }, 100);
+      });
+
+      document.getElementById('qrPrintModal').classList.add('active');
+    }
+
+    function closeQrModal() {
+      document.getElementById('qrPrintModal').classList.remove('active');
+    }
+
+    function simulateScan(serial, farmer, village, date, inv) {
+      document.getElementById('scanSerial').innerText = serial;
+      document.getElementById('scanFarmer').innerText = farmer;
+      document.getElementById('scanVillage').innerText = village;
+      document.getElementById('scanDate').innerText = date;
+      document.getElementById('scanInv').innerText = inv;
+      document.getElementById('qrScanResultModal').classList.add('active');
+    }
+
+    function closeScanResultModal() {
+      document.getElementById('qrScanResultModal').classList.remove('active');
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.view-pane').forEach(pane => pane.classList.remove('active'));
+      
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick') && b.getAttribute('onclick').includes(tabName));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const activePane = document.getElementById("view-" + tabName);
+      if (activePane) activePane.classList.add('active');
+    }
+
+    async function loadData() {
+      const seed = generateInitialSeedData();
+
+      let stored = localStorage.getItem('equiblue_app_state');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.farmers && parsed.farmers.length > 0) {
+            AppState.farmers = parsed.farmers;
+            AppState.batches = parsed.batches || [];
+            AppState.bags = parsed.bags || [];
+            AppState.transactions = parsed.transactions || [];
+          }
+        } catch (e) {}
+      }
+
+      if (!AppState.farmers || AppState.farmers.length < 303) {
+        AppState.farmers = seed.farmers;
+      }
+
+      saveLocalMetrics();
+      renderAll();
+
+      try {
+        const res = await callAWS('getInitialData');
+        if (res && res.success && res.farmers && res.farmers.length >= 303) {
+          AppState.farmers = res.farmers;
+          if (res.batches) AppState.batches = res.batches;
+          if (res.bags) AppState.bags = res.bags;
+          if (res.transactions) AppState.transactions = res.transactions;
+          saveLocalMetrics();
+          renderAll();
+        }
+      } catch (e) {
+        console.warn("AWS Live Fetch background sync:", e);
+      }
+    }
+
+    function saveLocalMetrics() {
+      let totalKg = 0, avail = 0, disp = 0;
+      if (AppState.batches) AppState.batches.forEach(b => totalKg += Number(b.totalBiocharOutputKg || b['Total Biochar Output (kg)'] || 0));
+      if (AppState.bags) AppState.bags.forEach(b => {
+        const st = b.status || b.Status;
+        if (st === 'Available') avail++;
+        if (st === 'Dispatched') disp++;
+      });
+      AppState.metrics = {
+        totalBiocharKg: totalKg,
+        availableBags: avail,
+        dispatchedBags: disp,
+        totalFarmers: AppState.farmers ? AppState.farmers.length : 303,
+        totalTransactions: AppState.transactions ? AppState.transactions.length : 0
+      };
+
+      try {
+        localStorage.setItem('equiblue_app_state', JSON.stringify(AppState));
+        if (AppState.farmers && AppState.farmers.length > 0) {
+          localStorage.setItem('equiblue_shared_farmers', JSON.stringify(AppState.farmers));
+        }
+      } catch (e) {
+        console.warn("LocalStorage save warning:", e);
+      }
+    }
+
+    function renderAll() {
+      renderMetrics();
+      renderBagsTable();
+      renderBatchSelect();
+      renderFarmersTable();
+      renderFarmerSelect();
+      renderTransactionsTable();
+    }
+
+    function renderMetrics() {
+      const m = AppState.metrics || {};
+      document.getElementById('dashTotalBiochar').innerText = (m.totalBiocharKg || 0) + " kg";
+      document.getElementById('dashAvailableBags').innerText = m.availableBags || 0;
+      document.getElementById('dashAvailableKg').innerText = ((m.availableBags || 0) * 25) + " kg biochar ready";
+      document.getElementById('dashDispatchedBags').innerText = m.dispatchedBags || 0;
+      document.getElementById('dashDispatchedKg').innerText = ((m.dispatchedBags || 0) * 25) + " kg biochar distributed";
+      document.getElementById('dashTotalFarmers').innerText = AppState.farmers ? AppState.farmers.length : 303;
+
+      const totalBags = (m.availableBags || 0) + (m.dispatchedBags || 0);
+      const ratio = totalBags > 0 ? Math.round((m.dispatchedBags / totalBags) * 100) : 0;
+      document.getElementById('stockRatioText').innerText = ratio + "% Dispatched";
+      document.getElementById('barDispatched').style.width = ratio + "%";
+      document.getElementById('barAvailable').style.width = (100 - ratio) + "%";
+    }
+
+    function renderBatchSelect() {
+      const sel = document.getElementById('deleteBatchSelect');
+      if (!sel) return;
+      if (!AppState.batches || AppState.batches.length === 0) {
+        sel.innerHTML = '<option value="">-- No Batches Available --</option>';
+        return;
+      }
+      sel.innerHTML = '<option value="">-- Select Batch to Delete --</option>' + AppState.batches.map(b => {
+        const id = b.batchId || b['Batch ID'];
+        const loc = b.location || b['Location'] || 'Kiln';
+        const kg = b.totalBiocharOutputKg || b['Total Biochar Output (kg)'] || 0;
+        return '<option value="' + id + '">Batch ' + id + ' (' + loc + ', ' + kg + ' kg)</option>';
+      }).join('');
+    }
+
+    function renderBagsTable() {
+      const tbody = document.getElementById('bagsTableBody');
+      if (!tbody) return;
+      const isAdmin = (currentLoggedInUser || 'admin').toLowerCase() === 'admin';
+
+      if (!AppState.bags || AppState.bags.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted)">No bags in inventory yet. Log a production batch to generate tags.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = AppState.bags.map(bag => {
+        const serial = bag.serialNumber || bag['Serial Number'];
+        const batch = bag.batchId || bag['Batch ID'];
+        const date = bag.entryDate || bag.productionDate || bag['Entry Date'] || bag['Production Date'] || bag['Warehouse Entry Date'] || new Date().toISOString().split('T')[0];
+        const loc = bag.location || bag['Location'] || '-';
+        const weight = bag.weightKg || bag['Weight (kg)'] || 25;
+        const status = bag.status || bag['Status'];
+        const inv = bag.invoiceNumber || bag['Invoice Number'] || '-';
+
+        return '<tr>' +
+          '<td><span class="tag-badge ' + (status === 'Dispatched' ? 'dispatched' : '') + '">' + serial + '</span></td>' +
+          '<td><strong>' + batch + '</strong></td>' +
+          '<td><span style="color:#34d399; font-weight:600;">' + date + '</span></td>' +
+          '<td>' + loc + '</td>' +
+          '<td>' + weight + ' kg</td>' +
+          '<td>' + status + '</td>' +
+          '<td>' + inv + '</td>' +
+          '<td>' +
+            (isAdmin ? '<button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem; color:#ef4444; border-color:rgba(239,68,68,0.4);" onclick="deleteBagItem(\'' + serial + '\')">🗑️ Delete Bag</button>' : '<span style="color:var(--text-dim); font-size:0.75rem;">View Only</span>') +
+          '</td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    function renderFarmersTable() {
+      const tbody = document.getElementById('farmerTableBody');
+      if (!tbody) return;
+      if (!AppState.farmers || AppState.farmers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; color:var(--text-muted)">No farmers registered yet.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = AppState.farmers.map(f => 
+        '<tr>' +
+          '<td><strong style="color:#38bdf8;">' + (f.farmerCode || f['Farmer Code']) + '</strong></td>' +
+          '<td><strong>' + (f.farmerName || f['Farmer Name']) + '</strong></td>' +
+          '<td>' + (f.gender || f['Gender'] || 'Male') + '</td>' +
+          '<td>' + (f.age || f['Age'] || '-') + '</td>' +
+          '<td>' + (f.mobile || f['Mobile Number'] || f['Mobile']) + '</td>' +
+          '<td>' + (f.area || f['Area'] || f['Total Land Holding (Acres)'] || 0) + ' Acres</td>' +
+          '<td>' + (f.village || f['Village / Panchayat'] || f['Village']) + '</td>' +
+          '<td>' + (f.panchayat || f['Panchayat'] || '-') + '</td>' +
+          '<td>' + (f.block || f['Block'] || '-') + '</td>' +
+          '<td>' + (f.district || f['District'] || '-') + '</td>' +
+          '<td>' + (f.state || f['State'] || '-') + '</td>' +
+          '<td>' + (f.pincode || f['Pincode'] || '-') + '</td>' +
+        '</tr>'
+      ).join('');
+    }
+
+    function renderFarmerSelect() {
+      const select = document.getElementById('invoiceFarmerSelect');
+      if (!select) return;
+      if (!AppState.farmers || AppState.farmers.length === 0) {
+        select.innerHTML = '<option value="">-- Choose Farmer --</option>';
+        return;
+      }
+      select.innerHTML = '<option value="">-- Choose Farmer --</option>' + AppState.farmers.map(f => {
+        const code = f.farmerCode || f['Farmer Code'];
+        const name = f.farmerName || f['Farmer Name'];
+        return '<option value="' + code + '">' + code + ' - ' + name + '</option>';
+      }).join('');
+    }
+
+    function renderTransactionsTable() {
+      const recentTbody = document.getElementById('recentTransactionsTable');
+      const fullTbody = document.getElementById('dispatchTableBody');
+
+      if (!AppState.transactions || AppState.transactions.length === 0) {
+        const emptyMsg = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted)">No dispatches recorded yet.</td></tr>';
+        if (recentTbody) recentTbody.innerHTML = emptyMsg;
+        if (fullTbody) fullTbody.innerHTML = emptyMsg;
+        return;
+      }
+
+      const rows = AppState.transactions.slice().reverse().map(t => {
+        const invNo = t.invoiceNumber || t['Invoice Number'];
+        return '<tr>' +
+          '<td><strong>' + invNo + '</strong></td>' +
+          '<td>' + (t.dispatchDate || t['Dispatch Date']) + '</td>' +
+          '<td>' + (t.farmerName || t['Farmer Name']) + '</td>' +
+          '<td>' + (t.village || t['Village']) + '</td>' +
+          '<td><strong>' + (t.bagsDispatched || t['Bags Dispatched (25kg)']) + '</strong></td>' +
+          '<td><span class="tag-badge dispatched">' + (t.allocatedBagSerials || t['Allocated Bag Serials']) + '</span></td>' +
+          '<td><button class="btn btn-secondary" style="padding:3px 8px; font-size:0.75rem;" onclick="printBagQrStickers(\'' + invNo + '\')">🖨️ Print ' + (t.bagsDispatched || t['Bags Dispatched (25kg)']) + ' Bag QR Stickers</button></td>' +
+        '</tr>';
+      }).join('');
+
+      if (recentTbody) recentTbody.innerHTML = rows;
+      if (fullTbody) fullTbody.innerHTML = rows;
+    }
+
+    async function deleteBagItem(serialNumber) {
+      if (currentLoggedInUser.toLowerCase() !== 'admin') {
+        showToast("Only Admin can delete inventory items!", "danger");
+        return;
+      }
+
+      if (confirm("Are you sure you want to DELETE Bag Tag " + serialNumber + " from inventory?")) {
+        AppState.bags = AppState.bags.filter(b => (b.serialNumber || b['Serial Number']) !== serialNumber);
+        
+        saveLocalMetrics();
+        renderAll();
+        showToast("Bag " + serialNumber + " deleted from inventory!", "success");
+
+        callAWS('deleteBagItem', { serialNumber });
+      }
+    }
+
+    async function handleDeleteBatchClick() {
+      if (currentLoggedInUser.toLowerCase() !== 'admin') {
+        showToast("Only Admin can delete production batches!", "danger");
+        return;
+      }
+
+      const sel = document.getElementById('deleteBatchSelect');
+      const batchId = sel ? sel.value : '';
+      if (!batchId) {
+        showToast("Please select a batch to delete!", "danger");
+        return;
+      }
+
+      if (confirm("Are you sure you want to DELETE Batch " + batchId + " and all associated 25kg bags?")) {
+        AppState.batches = AppState.batches.filter(b => (b.batchId || b['Batch ID']) !== batchId);
+        AppState.bags = AppState.bags.filter(b => (b.batchId || b['Batch ID']) !== batchId);
+
+        saveLocalMetrics();
+        renderAll();
+        showToast("Batch " + batchId + " and all associated bags deleted!", "success");
+
+        callAWS('deleteBatch', { batchId });
+      }
+    }
+
+    async function handleBatchSubmit(e) {
+      e.preventDefault();
+      const entryDate = document.getElementById('batchEntryDateInput').value || new Date().toISOString().split('T')[0];
+      const batchId = (document.getElementById('batchIdInput').value || 'B01').toUpperCase().trim();
+      const location = document.getElementById('batchLocationInput').value.trim() || 'Kiln Site A';
+      const outputKg = Number(document.getElementById('biocharOutputInput').value) || 100;
+      const count = Math.floor(outputKg / 25);
+
+      if (count <= 0) {
+        showToast("Biochar output must be at least 25 kg to generate 1 bag!", "danger");
+        return;
+      }
+
+      // Check if batch ID already exists
+      const existingBatch = AppState.batches.find(b => (b.batchId || b['Batch ID']) === batchId);
+      if (existingBatch) {
+        showToast("Batch ID " + batchId + " already exists! Use a unique Batch ID (e.g. LOC01B02).", "warning");
+        return;
+      }
+
+      // Instant Local State Update & Rendering
+      AppState.batches.push({
+        batchId, location, entryDate, totalBiocharOutputKg: outputKg, totalBagsGenerated: count
+      });
+      for (let i = 1; i <= count; i++) {
+        const num = String(i).padStart(2, '0');
+        AppState.bags.push({
+          serialNumber: batchId + num, batchId, location, entryDate, weightKg: 25, status: 'Available', invoiceNumber: '-'
+        });
+      }
+
+      saveLocalMetrics();
+      renderAll();
+      showToast("Batch " + batchId + " logged for date " + entryDate + "! Generated " + count + " bags (" + outputKg + " kg).", "success");
+
+      document.getElementById('batchForm').reset();
+      const batchDateElem = document.getElementById('batchEntryDateInput');
+      if (batchDateElem) batchDateElem.value = new Date().toISOString().split('T')[0];
+
+      // Async background AWS sync
+      const payload = {
+        batchInput: { batchId, location, entryDate, biocharOutput: outputKg }
+      };
+      callAWS('addProductionBatch', payload).catch(err => console.warn("AWS Batch sync warning:", err));
+    }
+
+    async function handleFarmerSubmit(e) {
+      e.preventDefault();
+      const inputCode = document.getElementById('fCode').value.trim();
+      const farmerName = document.getElementById('fName').value;
+      const gender = document.getElementById('fGender').value;
+      const age = document.getElementById('fAge').value;
+      const mobile = document.getElementById('fMobile').value;
+      const area = document.getElementById('fArea').value;
+      const village = document.getElementById('fVillage').value;
+      const panchayat = document.getElementById('fPanchayat').value;
+      const block = document.getElementById('fBlock').value;
+      const district = document.getElementById('fDistrict').value;
+      const state = document.getElementById('fState').value;
+      const pincode = document.getElementById('fPincode').value;
+
+      const code = inputCode ? inputCode.toUpperCase() : ("CR" + (101 + AppState.farmers.length));
+
+      const farmerObj = {
+        farmerCode: code,
+        farmerName,
+        gender,
+        age,
+        mobile,
+        area,
+        village,
+        panchayat,
+        block,
+        district,
+        state,
+        pincode
+      };
+
+      showToast("Registering farmer...", "info");
+      await callAWS('addFarmer', { farmerInput: farmerObj });
+
+      AppState.farmers.push(farmerObj);
+
+      saveLocalMetrics();
+      renderAll();
+      showToast("Farmer " + farmerName + " (" + code + ") registered successfully!", "success");
+      document.getElementById('farmerForm').reset();
+    }
+
+    async function handleInvoiceSubmit(e) {
+      e.preventDefault();
+      const date = document.getElementById('invoiceDateInput').value || new Date().toISOString().split('T')[0];
+      const farmerCode = document.getElementById('invoiceFarmerSelect').value;
+      const bagsReq = Number(document.getElementById('invoiceBagsInput').value);
+
+      if (!farmerCode) {
+        showToast("Please select a registered farmer!", "danger");
+        return;
+      }
+
+      const farmerObj = AppState.farmers.find(f => (f.farmerCode || f['Farmer Code']) === farmerCode);
+      if (!farmerObj) {
+        showToast("Farmer not found in local record!", "danger");
+        return;
+      }
+
+      const availBags = AppState.bags.filter(b => (b.status || b.Status) === 'Available');
+      if (availBags.length < bagsReq) {
+        showToast("Insufficient stock! Available: " + availBags.length + " bags, requested: " + bagsReq, "danger");
+        return;
+      }
+
+      const invNo = "INV-2026-" + String(AppState.transactions.length + 1).padStart(3, '0');
+      const allocated = availBags.slice(0, bagsReq);
+
+      allocated.forEach(b => {
+        b.status = 'Dispatched';
+        b.Status = 'Dispatched';
+        b.invoiceNumber = invNo;
+        b['Invoice Number'] = invNo;
+      });
+
+      const serialRange = allocated.length > 0 ? (allocated[0].serialNumber || allocated[0]['Serial Number']) + " to " + (allocated[allocated.length - 1].serialNumber || allocated[allocated.length - 1]['Serial Number']) : 'N/A';
+
+      const invoiceObj = {
+        invoiceNumber: invNo,
+        dispatchDate: date,
+        farmerCode: farmerCode,
+        farmerName: farmerObj.farmerName || farmerObj['Farmer Name'],
+        village: farmerObj.village || farmerObj['Village / Panchayat'] || farmerObj['Village'],
+        bagsDispatched: bagsReq,
+        allocatedBagSerials: serialRange
+      };
+
+      showToast("Issuing invoice...", "info");
+      await callAWS('createDispatchInvoice', { invoiceInput: invoiceObj });
+
+      AppState.transactions.push(invoiceObj);
+
+      saveLocalMetrics();
+      renderAll();
+      showToast("Invoice " + invNo + " issued! " + bagsReq + " bags allocated.", "success");
+      document.getElementById('invoiceForm').reset();
+      const invoiceDateElem = document.getElementById('invoiceDateInput');
+      if (invoiceDateElem) invoiceDateElem.value = new Date().toISOString().split('T')[0];
+
+      printBagQrStickers(invNo);
+    }
+  </script>
+</body>
+</html>
