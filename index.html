@@ -1384,10 +1384,30 @@
       printBagQrStickers(invNo);
     }
 
+    async function loadData() {
+      const stored = localStorage.getItem('equiblue_app_state');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.farmers && parsed.farmers.length > 0) {
+            AppState = parsed;
+          }
+        } catch (e) {}
+      }
+
+      const res = await callAWS('getInitialData');
+      if (res && res.success && res.farmers && res.farmers.length > 0) {
+        AppState = res;
+      }
+
+      saveLocalMetrics();
+      renderAll();
+    }
+
     function saveLocalMetrics() {
       let totalKg = 0, avail = 0, disp = 0;
-      AppState.batches.forEach(b => totalKg += Number(b.totalBiocharOutputKg || b['Total Biochar Output (kg)'] || 0));
-      AppState.bags.forEach(b => {
+      if (AppState.batches) AppState.batches.forEach(b => totalKg += Number(b.totalBiocharOutputKg || b['Total Biochar Output (kg)'] || 0));
+      if (AppState.bags) AppState.bags.forEach(b => {
         const st = b.status || b.Status;
         if (st === 'Available') avail++;
         if (st === 'Dispatched') disp++;
@@ -1396,9 +1416,19 @@
         totalBiocharKg: totalKg,
         availableBags: avail,
         dispatchedBags: disp,
-        totalFarmers: AppState.farmers.length,
-        totalTransactions: AppState.transactions.length
+        totalFarmers: AppState.farmers ? AppState.farmers.length : 0,
+        totalTransactions: AppState.transactions ? AppState.transactions.length : 0
       };
+
+      // REAL-TIME LOCALSTORAGE PERSISTENCE & CROSS-APP FARMER SYNC
+      try {
+        localStorage.setItem('equiblue_app_state', JSON.stringify(AppState));
+        if (AppState.farmers && AppState.farmers.length > 0) {
+          localStorage.setItem('equiblue_shared_farmers', JSON.stringify(AppState.farmers));
+        }
+      } catch (e) {
+        console.warn("LocalStorage save warning:", e);
+      }
     }
 
     function showToast(msg, type = "info") {
