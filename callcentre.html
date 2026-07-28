@@ -842,15 +842,54 @@
       input.value = '';
 
       setTimeout(() => {
-        let reply = "I am your Helpline AI Script Assistant! Ask me about biochar dosage, dispatch status, or lab sampling.";
-        const lower = text.toLowerCase();
-        if (lower.includes('dosage') || lower.includes('acre')) {
-          reply = "Biochar dosage recommendation: Apply 1 to 2 metric tons (40 to 80 bags of 25kg) per acre mixed into top 15cm soil layer.";
-        } else if (lower.includes('delivery') || lower.includes('status') || lower.includes('bag')) {
-          reply = "Advise the farmer to check their Bag QR Sticker or Invoice number. Delivery is tracked by unique 25kg tag serial ranges!";
-        }
+        const reply = askEquiblueSuperAi(text);
         appendChatMessage(reply, 'bot');
       }, 500);
+    }
+
+    function askEquiblueSuperAi(userPrompt) {
+      const prompt = userPrompt.toLowerCase();
+
+      if (prompt.includes('last') && (prompt.includes('call') || prompt.includes('ticket') || prompt.includes('inquiry'))) {
+        const calls = AppState.calls || [];
+        if (calls.length > 0) {
+          const lastCall = calls[calls.length - 1];
+          return `📞 <strong>LAST HELPLINE CALL TICKET:</strong><br><br>` +
+                 `• <strong>Ticket ID:</strong> ${lastCall.ticketId}<br>` +
+                 `• <strong>Farmer:</strong> ${lastCall.farmerName} (${lastCall.farmerCode})<br>` +
+                 `• <strong>Category:</strong> ${lastCall.category}<br>` +
+                 `• <strong>Status:</strong> ${lastCall.status}<br>` +
+                 `• <strong>Agent Notes:</strong> ${lastCall.notes}`;
+        }
+      }
+
+      if (prompt.includes('how many farmer') || prompt.includes('total farmer') || prompt.includes('shared farmer')) {
+        const count = AppState.sharedFarmers ? AppState.sharedFarmers.length : 0;
+        return `👨‍🌾 <strong>SYNCHRONIZED FARMER DIRECTORY:</strong><br><br>We currently have <strong>${count} farmers synchronized</strong> across MIS App 1, App 2, and Farmer Connect Call Centre.`;
+      }
+
+      if (prompt.includes('open ticket') || prompt.includes('pending') || prompt.includes('escalated')) {
+        const calls = AppState.calls || [];
+        const openCount = calls.filter(c => c.status === 'Pending Follow-up').length;
+        const escalatedCount = calls.filter(c => c.status === 'Escalated to Field Officer').length;
+        return `🎫 <strong>SUPPORT TICKET STATUS:</strong><br><br>` +
+               `• <strong>Pending Follow-up:</strong> ${openCount} Tickets<br>` +
+               `• <strong>Field Escalations:</strong> ${escalatedCount} Tickets`;
+      }
+
+      if (prompt.includes('dosage') || prompt.includes('how much biochar') || prompt.includes('per acre')) {
+        return `🌾 <strong>TECHNICAL DOSAGE & HELPLINE SCRIPT:</strong><br><br>` +
+               `• <strong>Recommended Rate:</strong> 1 to 2 Metric Tons per acre (40 to 80 bags of 25kg each).<br>` +
+               `• <strong>Application Method:</strong> Broadcast evenly across field and till into top 15cm soil before sowing.<br>` +
+               `• <strong>Pyrolysis Temperature:</strong> High-temperature slow pyrolysis (500°C–700°C).`;
+      }
+
+      return `🤖 <strong>EQUIBLUE UNIFIED AI HELPLINE ASSISTANT:</strong><br><br>` +
+             `I have real-time access to your <strong>Helpline Tickets, Synchronized Farmer Directory & Technical FAQs</strong>!<br><br>` +
+             `Try asking me:<br>` +
+             `• <em>"When was the last call ticket?"</em><br>` +
+             `• <em>"How many open tickets?"</em><br>` +
+             `• <em>"What is recommended biochar dosage per acre?"</em>`;
     }
 
     function appendChatMessage(msg, sender) {
