@@ -1293,13 +1293,54 @@
     }
 
     function renderTrialSelects() {
-      const options = `<option value="">-- Choose Trial --</option>` + AppState.trials.map(t => `
-        <option value="${t['Farmer ID']}">${t['Farmer ID']} - ${t['Farmer Name']} (${t['Village / Panchayat']})</option>
-      `).join('');
+      let allFarmerOptions = [];
 
-      document.getElementById('socFarmerSelect').innerHTML = options;
-      document.getElementById('yieldFarmerSelect').innerHTML = options;
-      document.getElementById('biocharFarmerSelect').innerHTML = options;
+      // 1. Load shared farmers from App 1 (Carbon Root MIS)
+      try {
+        const sharedRaw = localStorage.getItem('equiblue_shared_farmers') || localStorage.getItem('equiblue_app_state') || localStorage.getItem('equiblue_farmers_master_db');
+        if (sharedRaw) {
+          const parsed = JSON.parse(sharedRaw);
+          const farmerList = Array.isArray(parsed) ? parsed : (parsed.farmers || []);
+          farmerList.forEach(f => {
+            const fid = f.farmerCode || f['Farmer Code'] || f['Farmer ID'] || f.id;
+            const fname = f.farmerName || f['Farmer Name'] || f['Name'] || f.name;
+            const fvillage = f.village || f['Village / Panchayat'] || f['Village'] || '';
+            if (fid && fname && !allFarmerOptions.some(o => o.id === fid)) {
+              allFarmerOptions.push({ id: fid, name: fname, village: fvillage });
+            }
+          });
+        }
+      } catch (e) {
+        console.warn("Shared farmer load warning:", e);
+      }
+
+      // 2. Add trials already registered in research AppState
+      if (AppState.trials) {
+        AppState.trials.forEach(t => {
+          const fid = t['Farmer ID'] || t.farmerCode;
+          const fname = t['Farmer Name'] || t.farmerName;
+          const fvillage = t['Village / Panchayat'] || t.village || '';
+          if (fid && fname && !allFarmerOptions.some(o => o.id === fid)) {
+            allFarmerOptions.push({ id: fid, name: fname, village: fvillage });
+          }
+        });
+      }
+
+      if (allFarmerOptions.length === 0) {
+        const emptyOptions = '<option value="">-- No Farmers Found --</option>';
+        document.getElementById('socFarmerSelect').innerHTML = emptyOptions;
+        document.getElementById('yieldFarmerSelect').innerHTML = emptyOptions;
+        document.getElementById('biocharFarmerSelect').innerHTML = emptyOptions;
+        return;
+      }
+
+      const optionsHtml = '<option value="">-- Choose Farmer --</option>' + allFarmerOptions.map(f => {
+        return `<option value="${f.id}">${f.id} - ${f.name} ${f.village ? '(' + f.village + ')' : ''}</option>`;
+      }).join('');
+
+      document.getElementById('socFarmerSelect').innerHTML = optionsHtml;
+      document.getElementById('yieldFarmerSelect').innerHTML = optionsHtml;
+      document.getElementById('biocharFarmerSelect').innerHTML = optionsHtml;
     }
 
     function autoFillSocPlots() {
