@@ -616,25 +616,46 @@
     function loadCallCentreData() {
       // 1. Fetch Shared Farmers from App 1 & App 2 LocalStorage Engine
       let shared = [];
-      const storedApp1 = localStorage.getItem('equiblue_farmers_master_db');
+      const storedShared = localStorage.getItem('equiblue_shared_farmers') || localStorage.getItem('equiblue_app_state') || localStorage.getItem('equiblue_farmers_master_db');
       const storedApp2 = localStorage.getItem('equiblue_research_mis_db');
 
-      if (storedApp1) {
+      if (storedShared) {
         try {
-          const parsed = JSON.parse(storedApp1);
-          if (parsed.farmers) shared = shared.concat(parsed.farmers);
-        } catch(e){}
+          const parsed = JSON.parse(storedShared);
+          const farmerList = Array.isArray(parsed) ? parsed : (parsed.farmers || []);
+          farmerList.forEach(f => {
+            const fid = f.farmerCode || f['Farmer Code'] || f['Farmer ID'] || f.id;
+            const fname = f.farmerName || f['Farmer Name'] || f['Name'] || f.name;
+            const fvillage = f.village || f['Village / Panchayat'] || f['Village'] || '';
+            const fmobile = f.mobile || f['Mobile Number'] || f['Mobile'] || '';
+            const farea = f.area || f['Area (Acres)'] || f['Area'] || '0';
+
+            if (fid && fname && !shared.some(s => (s.farmerCode || s['Farmer Code']) === fid)) {
+              shared.push({
+                farmerCode: fid,
+                farmerName: fname,
+                village: fvillage,
+                mobile: fmobile,
+                area: farea
+              });
+            }
+          });
+        } catch(e) {
+          console.warn("Call centre shared farmer load warning:", e);
+        }
       }
+
       if (storedApp2) {
         try {
           const parsed = JSON.parse(storedApp2);
           if (parsed.trials) {
             parsed.trials.forEach(t => {
-              if (!shared.some(f => (f.farmerCode || f['Farmer ID']) === t['Farmer ID'])) {
+              const tid = t['Farmer ID'] || t.farmerCode;
+              if (tid && !shared.some(f => (f.farmerCode || f['Farmer Code']) === tid)) {
                 shared.push({
-                  farmerCode: t['Farmer ID'],
-                  farmerName: t['Farmer Name'],
-                  village: t['Village / Panchayat'],
+                  farmerCode: tid,
+                  farmerName: t['Farmer Name'] || t.farmerName,
+                  village: t['Village / Panchayat'] || t.village || '',
                   mobile: t['Mobile Number'] || '9876543210',
                   area: t['Case Area (Acres)'] || '2.0'
                 });
