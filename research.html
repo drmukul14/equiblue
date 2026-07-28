@@ -352,18 +352,20 @@
           <form id="trialForm" onsubmit="handleTrialSubmit(event)">
             <div class="form-group">
               <label class="form-label">
-                <span>Farmer ID (Primary MIS Reference)</span>
-                <small style="color:#34d399;">💡 Unique Code e.g. CR101</small>
+                <span>Select Farmer from Shared Directory</span>
+                <small style="color:#34d399;">💡 Synchronized from App 1 (303 Farmers)</small>
               </label>
-              <input type="text" id="trialFarmerId" class="form-control" placeholder="e.g. CR101" required onfocus="showFieldTip(this, 'Enter unique farmer identification code (e.g. CR101).')" onblur="hideFieldTip(this)">
+              <select id="trialFarmerSelect" class="form-control" style="font-weight:700; color:#fbbf24;" onchange="autoFillTrialFarmerDetails(this.value)" required>
+                <option value="">-- Choose Farmer from MIS Directory --</option>
+              </select>
               <div class="field-ai-tip"></div>
             </div>
             <div class="form-group">
               <label class="form-label">
-                <span>Farmer Name</span>
+                <span>Farmer Name (Auto-Filled)</span>
                 <small style="color:#34d399;">💡 Primary Landowner Name</small>
               </label>
-              <input type="text" id="trialFarmerName" class="form-control" placeholder="e.g. Ramesh Kumar" required onfocus="showFieldTip(this, 'Full official name of the participating farmer.')" onblur="hideFieldTip(this)">
+              <input type="text" id="trialFarmerName" class="form-control" placeholder="Select farmer above" required onfocus="showFieldTip(this, 'Full official name of the participating farmer.')" onblur="hideFieldTip(this)">
               <div class="field-ai-tip"></div>
             </div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -1328,6 +1330,7 @@
 
       if (allFarmerOptions.length === 0) {
         const emptyOptions = '<option value="">-- No Farmers Found --</option>';
+        if (document.getElementById('trialFarmerSelect')) document.getElementById('trialFarmerSelect').innerHTML = emptyOptions;
         document.getElementById('socFarmerSelect').innerHTML = emptyOptions;
         document.getElementById('yieldFarmerSelect').innerHTML = emptyOptions;
         document.getElementById('biocharFarmerSelect').innerHTML = emptyOptions;
@@ -1338,9 +1341,34 @@
         return `<option value="${f.id}">${f.id} - ${f.name} ${f.village ? '(' + f.village + ')' : ''}</option>`;
       }).join('');
 
+      if (document.getElementById('trialFarmerSelect')) document.getElementById('trialFarmerSelect').innerHTML = optionsHtml;
       document.getElementById('socFarmerSelect').innerHTML = optionsHtml;
       document.getElementById('yieldFarmerSelect').innerHTML = optionsHtml;
       document.getElementById('biocharFarmerSelect').innerHTML = optionsHtml;
+    }
+
+    function autoFillTrialFarmerDetails(fid) {
+      if (!fid) return;
+
+      let sharedList = [];
+      try {
+        const sharedRaw = localStorage.getItem('equiblue_shared_farmers') || localStorage.getItem('equiblue_app_state') || localStorage.getItem('equiblue_farmers_master_db');
+        if (sharedRaw) {
+          const parsed = JSON.parse(sharedRaw);
+          sharedList = Array.isArray(parsed) ? parsed : (parsed.farmers || []);
+        }
+      } catch(e){}
+
+      const match = sharedList.find(f => (f.farmerCode || f['Farmer Code'] || f['Farmer ID'] || f.id) === fid);
+
+      if (match) {
+        document.getElementById('trialFarmerName').value = match.farmerName || match['Farmer Name'] || match['Name'] || '';
+        document.getElementById('trialVillage').value = match.village || match['Village / Panchayat'] || match['Village'] || '';
+        document.getElementById('trialMobile').value = match.mobile || match['Mobile Number'] || match['Mobile'] || '';
+        document.getElementById('trialCasePlotId').value = fid + "-CASE";
+        document.getElementById('trialControlPlotId').value = fid + "-CTRL";
+        showToast(`Loaded details for Farmer ${fid} (${match.farmerName || match['Farmer Name'] || ''})!`, "success");
+      }
     }
 
     function autoFillSocPlots() {
@@ -1473,7 +1501,14 @@
 
     function handleTrialSubmit(e) {
       e.preventDefault();
-      const farmerId = document.getElementById('trialFarmerId').value.trim().toUpperCase();
+      const farmerIdSelect = document.getElementById('trialFarmerSelect');
+      const farmerIdInput = document.getElementById('trialFarmerId');
+      const farmerId = (farmerIdSelect && farmerIdSelect.value ? farmerIdSelect.value : (farmerIdInput ? farmerIdInput.value : '')).trim().toUpperCase();
+
+      if (!farmerId) {
+        showToast("Please select or enter a Farmer ID!", "danger");
+        return;
+      }
       const farmerName = document.getElementById('trialFarmerName').value;
       const village = document.getElementById('trialVillage').value;
       const mobile = document.getElementById('trialMobile').value;
