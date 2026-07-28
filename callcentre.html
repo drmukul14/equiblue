@@ -507,8 +507,15 @@
       <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;" onclick="aiAutoFillCall()">✨ Sample Call Log</button>
     </div>
 
-    <div class="ai-chat-input-area">
-      <input type="text" id="aiChatInput" placeholder="Ask 'How to apply biochar per acre?'..." onkeypress="if(event.key==='Enter') sendAiMessage()">
+    <div id="aiAttachmentBadge" style="display: none; padding: 4px 12px; background: rgba(16, 185, 129, 0.2); border-top: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-size: 0.75rem; font-weight: 600; justify-content: space-between; align-items: center;">
+      <span id="aiAttachmentName">📎 Attachment: document.pdf</span>
+      <button onclick="clearAiAttachment()" style="background:transparent; border:none; color:#ef4444; font-weight:bold; cursor:pointer;">✕ Remove</button>
+    </div>
+
+    <div class="ai-chat-input-area" style="align-items: center;">
+      <input type="file" id="aiFileInput" style="display:none;" accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.json" onchange="handleAiFileAttach(event)">
+      <button class="btn btn-secondary" title="Attach Document (PDF, Word, Excel, CSV, TXT)" style="padding: 0.6rem 0.75rem; font-size: 1rem;" onclick="document.getElementById('aiFileInput').click()">📎</button>
+      <input type="text" id="aiChatInput" placeholder="Ask or type 'Cross check Ramesh Kumar in attachment'..." onkeypress="if(event.key==='Enter') sendAiMessage()">
       <button class="btn" style="padding: 6px 12px;" onclick="sendAiMessage()">Send</button>
     </div>
   </div>
@@ -517,6 +524,66 @@
 
   <script>
     const API_ENDPOINT = "https://pnm5izgdkvixfgp6oraa7rug40djdtf.lambda-url.us-east-1.on.aws/";
+    let attachedDocContent = "";
+    let attachedDocName = "";
+    let attachedDocRows = [];
+
+    function handleAiFileAttach(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      attachedDocName = file.name;
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      showToast("Reading attachment: " + file.name, "info");
+
+      if (['xlsx', 'xls', 'csv'].includes(ext)) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          try {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            attachedDocRows = XLSX.utils.sheet_to_json(sheet);
+            attachedDocContent = JSON.stringify(attachedDocRows);
+            showAiAttachmentBadge(`📎 Attachment: ${file.name} (${attachedDocRows.length} rows parsed)`);
+            showToast(`Loaded ${attachedDocRows.length} rows from ${file.name}! Ask Kaari AI to cross-check.`, "success");
+          } catch(err) {
+            showToast("Error parsing spreadsheet: " + err.message, "danger");
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          attachedDocContent = evt.target.result || "";
+          attachedDocRows = [];
+          showAiAttachmentBadge(`📎 Attachment: ${file.name} (${file.size} bytes)`);
+          showToast(`Attached ${file.name}! Ask Kaari AI questions about this document.`, "success");
+        };
+        reader.readAsText(file);
+      }
+    }
+
+    function showAiAttachmentBadge(label) {
+      const badge = document.getElementById('aiAttachmentBadge');
+      const textElem = document.getElementById('aiAttachmentName');
+      if (badge && textElem) {
+        textElem.innerText = label;
+        badge.style.display = 'flex';
+      }
+    }
+
+    function clearAiAttachment() {
+      attachedDocContent = "";
+      attachedDocName = "";
+      attachedDocRows = [];
+      const badge = document.getElementById('aiAttachmentBadge');
+      if (badge) badge.style.display = 'none';
+      const fileInput = document.getElementById('aiFileInput');
+      if (fileInput) fileInput.value = '';
+      showToast("Removed attachment.", "info");
+    }
 
     let AppState = {
       calls: [],
@@ -871,46 +938,149 @@
     function askEquiblueSuperAi(userPrompt) {
       const prompt = userPrompt.toLowerCase();
 
-      if (prompt.includes('last') && (prompt.includes('call') || prompt.includes('ticket') || prompt.includes('inquiry'))) {
-        const calls = AppState.calls || [];
-        if (calls.length > 0) {
-          const lastCall = calls[calls.length - 1];
-          return `📞 <strong>LAST HELPLINE CALL TICKET:</strong><br><br>` +
-                 `• <strong>Ticket ID:</strong> ${lastCall.ticketId}<br>` +
-                 `• <strong>Farmer:</strong> ${lastCall.farmerName} (${lastCall.farmerCode})<br>` +
-                 `• <strong>Category:</strong> ${lastCall.category}<br>` +
-                 `• <strong>Status:</strong> ${lastCall.status}<br>` +
-                 `• <strong>Agent Notes:</strong> ${lastCall.notes}`;
+      // UNIFIED OMNISCIENT BRAIN ACROSS ALL 3 APPS
+      let app1Data = {};
+      let app2Data = {};
+      let app3Calls = AppState.calls || [];
+      let sharedFarmers = [];
+      try {
+        const raw1 = localStorage.getItem('equiblue_app_state');
+        if (raw1) app1Data = JSON.parse(raw1);
+        const raw2 = localStorage.getItem('equiblue_research_mis_db');
+        if (raw2) app2Data = JSON.parse(raw2);
+        const rawShared = localStorage.getItem('equiblue_shared_farmers');
+        if (rawShared) sharedFarmers = JSON.parse(rawShared);
+      } catch (e) {}
+
+      const farmersList = app1Data.farmers || sharedFarmers || [];
+      const transactionsList = app1Data.transactions || [];
+      const trialsList = app2Data.trials || [];
+      const socList = app2Data.socRecords || [];
+      const callsList = app3Calls || [];
+
+      // 1. MONTH-BASED DISTRIBUTION QUERY ENGINE
+      const monthsMap = {
+        'january': '01', 'jan': '01',
+        'february': '02', 'feb': '02',
+        'march': '03', 'mar': '03',
+        'april': '04', 'apr': '04',
+        'may': '05',
+        'june': '06', 'jun': '06',
+        'july': '07', 'jul': '07',
+        'august': '08', 'aug': '08',
+        'september': '09', 'sep': '09', 'sept': '09',
+        'october': '10', 'oct': '10',
+        'november': '11', 'nov': '11',
+        'december': '12', 'dec': '12'
+      };
+
+      let matchedMonthNum = null;
+      let matchedMonthName = null;
+      for (let mName in monthsMap) {
+        if (prompt.includes(mName)) {
+          matchedMonthNum = monthsMap[mName];
+          matchedMonthName = mName.charAt(0).toUpperCase() + mName.slice(1);
+          break;
         }
       }
 
-      if (prompt.includes('how many farmer') || prompt.includes('total farmer') || prompt.includes('shared farmer')) {
-        const count = AppState.sharedFarmers ? AppState.sharedFarmers.length : 0;
-        return `👨‍🌾 <strong>SYNCHRONIZED FARMER DIRECTORY:</strong><br><br>We currently have <strong>${count} farmers synchronized</strong> across MIS App 1, App 2, and Farmer Connect Call Centre.`;
+      if (matchedMonthNum && (prompt.includes('received') || prompt.includes('dispatched') || prompt.includes('distribution') || prompt.includes('farmer') || prompt.includes('month') || prompt.includes('many'))) {
+        const monthTx = transactionsList.filter(t => {
+          const d = t.dispatchDate || t['Dispatch Date'] || '';
+          return d.includes(`-${matchedMonthNum}-`) || d.startsWith(`2026-${matchedMonthNum}`);
+        });
+
+        let uniqueFarmersInMonth = new Set();
+        let totalBagsInMonth = 0;
+        monthTx.forEach(t => {
+          const fName = t.farmerName || t['Farmer Name'];
+          if (fName) uniqueFarmersInMonth.add(fName);
+          totalBagsInMonth += Number(t.bagsDispatched || t['Bags Dispatched (25kg)'] || 0);
+        });
+
+        return `📅 <strong>${matchedMonthName.toUpperCase()} DISTRIBUTION REPORT (Carbon Root MIS App 1):</strong><br><br>` +
+               `• <strong>Total Farmers Received Biochar:</strong> <strong style="color:#10b981; font-size:1.1rem;">${uniqueFarmersInMonth.size} Farmers</strong><br>` +
+               `• <strong>Total Invoices Issued:</strong> ${monthTx.length} Invoices<br>` +
+               `• <strong>Total Bags Distributed (25kg):</strong> ${totalBagsInMonth} Bags (${totalBagsInMonth * 25} kg)<br>` +
+               (uniqueFarmersInMonth.size > 0 ? `• <strong>Sample Farmers Served:</strong> ${Array.from(uniqueFarmersInMonth).slice(0, 5).join(', ')}${uniqueFarmersInMonth.size > 5 ? '... and more' : ''}` : `ℹ️ No dispatch invoices recorded specifically for ${matchedMonthName} yet.`);
       }
 
-      if (prompt.includes('open ticket') || prompt.includes('pending') || prompt.includes('escalated')) {
-        const calls = AppState.calls || [];
-        const openCount = calls.filter(c => c.status === 'Pending Follow-up').length;
-        const escalatedCount = calls.filter(c => c.status === 'Escalated to Field Officer').length;
-        return `🎫 <strong>SUPPORT TICKET STATUS:</strong><br><br>` +
-               `• <strong>Pending Follow-up:</strong> ${openCount} Tickets<br>` +
-               `• <strong>Field Escalations:</strong> ${escalatedCount} Tickets`;
+      // 2. FARMER SPECIFIC BIOCHAR RECEIVED QUERY
+      let farmerMatch = null;
+      if (farmersList.length > 0) {
+        let cleanQuery = prompt.replace(/[^\w\s]/gi, '').toLowerCase();
+        farmerMatch = farmersList.find(f => {
+          const code = String(f.farmerCode || f['Farmer Code'] || f['Farmer ID'] || f['Code'] || '').trim().toLowerCase();
+          const name = String(f.farmerName || f['Farmer Name'] || f['Name'] || '').trim().toLowerCase();
+          if (!code && !name) return false;
+
+          if (code && cleanQuery.includes(code)) return true;
+          if (name && name.length > 3 && cleanQuery.includes(name)) return true;
+          return false;
+        });
+
+        if (!farmerMatch) {
+          const codeMatchRegex = /\b([a-z]{1,4}\d{1,6})\b/i;
+          const matchResult = prompt.match(codeMatchRegex);
+          if (matchResult && matchResult[1]) {
+            const extractedCode = matchResult[1].toLowerCase();
+            farmerMatch = farmersList.find(f => {
+              const code = String(f.farmerCode || f['Farmer Code'] || f['Farmer ID'] || f['Code'] || '').trim().toLowerCase();
+              return code === extractedCode;
+            });
+          }
+        }
       }
 
-      if (prompt.includes('dosage') || prompt.includes('how much biochar') || prompt.includes('per acre')) {
-        return `🌾 <strong>TECHNICAL DOSAGE & HELPLINE SCRIPT:</strong><br><br>` +
-               `• <strong>Recommended Rate:</strong> 1 to 2 Metric Tons per acre (40 to 80 bags of 25kg each).<br>` +
-               `• <strong>Application Method:</strong> Broadcast evenly across field and till into top 15cm soil before sowing.<br>` +
-               `• <strong>Pyrolysis Temperature:</strong> High-temperature slow pyrolysis (500°C–700°C).`;
+      if (farmerMatch && (prompt.includes('receive') || prompt.includes('biochar') || prompt.includes('how much') || prompt.includes('bag') || prompt.includes('delivered') || prompt.includes('quota'))) {
+        const fcode = farmerMatch.farmerCode || farmerMatch['Farmer Code'] || farmerMatch['Farmer ID'];
+        const fname = farmerMatch.farmerName || farmerMatch['Farmer Name'] || farmerMatch['Name'];
+
+        const farmerTx = transactionsList.filter(t => {
+          const tc = String(t.farmerCode || t['Farmer Code'] || '').toLowerCase();
+          const tn = String(t.farmerName || t['Farmer Name'] || '').toLowerCase();
+          return (fcode && tc === String(fcode).toLowerCase()) || (fname && tn.includes(String(fname).toLowerCase()));
+        });
+
+        let totalBags = 0;
+        farmerTx.forEach(t => totalBags += Number(t.bagsDispatched || t['Bags Dispatched (25kg)'] || 0));
+
+        return `🌾 <strong>BIOCHAR DISTRIBUTION RECORD FOR ${fname.toUpperCase()}:</strong><br><br>` +
+               `• <strong>Farmer Code:</strong> <code>${fcode}</code><br>` +
+               `• <strong>Total Biochar Received:</strong> <strong style="color:#10b981; font-size:1.1rem;">${totalBags} Bags (${totalBags * 25} kg)</strong><br>` +
+               `• <strong>Total Invoices Issued:</strong> ${farmerTx.length} Invoices<br>` +
+               (farmerTx.length > 0 ? `• <strong>Recent Invoice:</strong> ${farmerTx[farmerTx.length - 1].invoiceNumber || farmerTx[farmerTx.length - 1]['Invoice Number']} on ${farmerTx[farmerTx.length - 1].dispatchDate || farmerTx[farmerTx.length - 1]['Dispatch Date']}<br>` +
+               `• <strong>Bag Serial Range:</strong> <code>${farmerTx[farmerTx.length - 1].allocatedBagSerials || farmerTx[farmerTx.length - 1]['Allocated Bag Serials']}</code>` : `ℹ️ No dispatch invoices recorded yet for this farmer.`);
       }
 
-      return `🤖 <strong>EQUIBLUE UNIFIED AI HELPLINE ASSISTANT:</strong><br><br>` +
-             `I have real-time access to your <strong>Helpline Tickets, Synchronized Farmer Directory & Technical FAQs</strong>!<br><br>` +
+      // 3. FARMER DIRECT CODE & NAME DETAILS LOOKUP
+      if (farmerMatch && (prompt.includes('name') || prompt.includes('who') || prompt.includes('detail') || prompt.includes('code') || prompt.includes('info') || prompt.includes('is'))) {
+        const fcode = farmerMatch.farmerCode || farmerMatch['Farmer Code'] || farmerMatch['Farmer ID'];
+        const fname = farmerMatch.farmerName || farmerMatch['Farmer Name'] || farmerMatch['Name'];
+        const fvillage = farmerMatch.village || farmerMatch['Village / Panchayat'] || farmerMatch['Village'] || 'N/A';
+        const fmobile = farmerMatch.mobile || farmerMatch['Mobile Number'] || farmerMatch['Mobile'] || 'N/A';
+        const farea = farmerMatch.area || farmerMatch['Area (Acres)'] || farmerMatch['Area'] || '0';
+
+        const inResearch = trialsList.some(t => String(t['Farmer ID'] || t.farmerCode || '').toLowerCase() === String(fcode).toLowerCase());
+        const callsCount = callsList.filter(c => String(c.farmerCode || '').toLowerCase() === String(fcode).toLowerCase() || String(c.farmerName || '').toLowerCase() === String(fname).toLowerCase()).length;
+
+        return `👨‍🌾 <strong>OMNISCIENT FARMER PROFILE (Cross-App Intelligence):</strong><br><br>` +
+               `• <strong>Farmer Code:</strong> <code>${fcode}</code><br>` +
+               `• <strong>Farmer Name:</strong> <strong style="color:#fbbf24; font-size:1.1rem;">${fname}</strong><br>` +
+               `• <strong>Village / Location:</strong> ${fvillage}<br>` +
+               `• <strong>Mobile Number:</strong> ${fmobile}<br>` +
+               `• <strong>Land Holding:</strong> ${farea} Acres<br>` +
+               `• <strong>Research Study Status (App 2):</strong> ${inResearch ? '<strong style="color:#10b981;">Active in Paired Trial</strong>' : 'Registered in MIS'}<br>` +
+               `• <strong>Helpline Support Calls (App 3):</strong> ${callsCount} Call Ticket(s)`;
+      }
+
+      return `🤖 <strong>KAARI AI UNIFIED OMNISCIENT BRAIN:</strong><br><br>` +
+             `I monitor all activity across your <strong>3 Applications</strong> in real-time!<br><br>` +
              `Try asking me:<br>` +
-             `• <em>"When was the last call ticket?"</em><br>` +
-             `• <em>"How many open tickets?"</em><br>` +
-             `• <em>"What is recommended biochar dosage per acre?"</em>`;
+             `• <em>"What is name of farmer with code PG102?"</em><br>` +
+             `• <em>"How much biochar received by farmer Ramesh Kumar?"</em><br>` +
+             `• <em>"How many farmers received biochar in March month?"</em><br>` +
+             `• <em>"Have we called Ramesh Kumar in helpline?"</em>`;
     }
 
     function appendChatMessage(msg, sender) {
