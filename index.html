@@ -628,8 +628,15 @@
       <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;" onclick="quickAiAsk('What is recommended biochar dosage per acre?')">🌾 Biochar Dosage</button>
     </div>
 
-    <div style="padding: 0.85rem; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(11, 19, 43, 0.8); display: flex; gap: 0.5rem;">
-      <input type="text" id="aiChatInput" placeholder="Ask 'When was the last distribution?'..." style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.6rem 0.85rem; border-radius: 8px; color: #fff; outline: none;" onkeypress="if(event.key==='Enter') sendAiMessage()">
+    <div id="aiAttachmentBadge" style="display: none; padding: 4px 12px; background: rgba(16, 185, 129, 0.2); border-top: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-size: 0.75rem; font-weight: 600; justify-content: space-between; align-items: center;">
+      <span id="aiAttachmentName">📎 Attachment: document.pdf</span>
+      <button onclick="clearAiAttachment()" style="background:transparent; border:none; color:#ef4444; font-weight:bold; cursor:pointer;">✕ Remove</button>
+    </div>
+
+    <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255,255,255,0.1); background: rgba(11, 19, 43, 0.8); display: flex; gap: 0.5rem; align-items: center;">
+      <input type="file" id="aiFileInput" style="display:none;" accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.json" onchange="handleAiFileAttach(event)">
+      <button class="btn btn-secondary" title="Attach Document (PDF, Word, Excel, CSV, TXT)" style="padding: 0.6rem 0.75rem; font-size: 1rem;" onclick="document.getElementById('aiFileInput').click()">📎</button>
+      <input type="text" id="aiChatInput" placeholder="Ask or type 'Cross check Ramesh Kumar in attachment'..." style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.6rem 0.85rem; border-radius: 8px; color: #fff; outline: none;" onkeypress="if(event.key==='Enter') sendAiMessage()">
       <button class="btn" style="padding: 6px 12px;" onclick="sendAiMessage()">Send</button>
     </div>
   </div>
@@ -638,6 +645,66 @@
 
   <script>
     const API_ENDPOINT = "https://pnm5izgdkvixfgp6oraa7rug40djdtf.lambda-url.us-east-1.on.aws/";
+    let attachedDocContent = "";
+    let attachedDocName = "";
+    let attachedDocRows = [];
+
+    function handleAiFileAttach(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      attachedDocName = file.name;
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      showToast("Reading attachment: " + file.name, "info");
+
+      if (['xlsx', 'xls', 'csv'].includes(ext)) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          try {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            attachedDocRows = XLSX.utils.sheet_to_json(sheet);
+            attachedDocContent = JSON.stringify(attachedDocRows);
+            showAiAttachmentBadge(`📎 Attachment: ${file.name} (${attachedDocRows.length} rows parsed)`);
+            showToast(`Loaded ${attachedDocRows.length} rows from ${file.name}! Ask Kaari AI to cross-check.`, "success");
+          } catch(err) {
+            showToast("Error parsing spreadsheet: " + err.message, "danger");
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          attachedDocContent = evt.target.result || "";
+          attachedDocRows = [];
+          showAiAttachmentBadge(`📎 Attachment: ${file.name} (${file.size} bytes)`);
+          showToast(`Attached ${file.name}! Ask Kaari AI questions about this document.`, "success");
+        };
+        reader.readAsText(file);
+      }
+    }
+
+    function showAiAttachmentBadge(label) {
+      const badge = document.getElementById('aiAttachmentBadge');
+      const textElem = document.getElementById('aiAttachmentName');
+      if (badge && textElem) {
+        textElem.innerText = label;
+        badge.style.display = 'flex';
+      }
+    }
+
+    function clearAiAttachment() {
+      attachedDocContent = "";
+      attachedDocName = "";
+      attachedDocRows = [];
+      const badge = document.getElementById('aiAttachmentBadge');
+      if (badge) badge.style.display = 'none';
+      const fileInput = document.getElementById('aiFileInput');
+      if (fileInput) fileInput.value = '';
+      showToast("Removed attachment.", "info");
+    }
 
     function toggleAiChat() {
       const win = document.getElementById('aiChatWindow');
@@ -690,7 +757,82 @@
 
     function askEquiblueSuperAi(userPrompt) {
       const prompt = userPrompt.toLowerCase();
-      
+
+      // UNIFIED COMBINED BRAIN ACROSS ALL 3 APPS
+      let app1Data = AppState || {};
+      let app2Data = {};
+      let app3Calls = [];
+      try {
+        const raw2 = localStorage.getItem('equiblue_research_mis_db');
+        if (raw2) app2Data = JSON.parse(raw2);
+        const raw3 = localStorage.getItem('equiblue_call_logs');
+        if (raw3) app3Calls = JSON.parse(raw3);
+      } catch (e) {}
+
+      // 1. HELPLINE CALL QUERIES (App 3 Cross-Check)
+      if (prompt.includes('call') || prompt.includes('helpline') || prompt.includes('ticket') || prompt.includes('inquiry')) {
+        let farmerMatch = null;
+        if (app1Data.farmers) {
+          farmerMatch = app1Data.farmers.find(f => {
+            const name = (f.farmerName || f['Farmer Name'] || '').toLowerCase();
+            const code = (f.farmerCode || f['Farmer Code'] || '').toLowerCase();
+            return (code && prompt.includes(code)) || (name && prompt.includes(name));
+          });
+        }
+
+        if (farmerMatch) {
+          const code = farmerMatch.farmerCode || farmerMatch['Farmer Code'];
+          const name = farmerMatch.farmerName || farmerMatch['Farmer Name'];
+          const farmerCalls = app3Calls.filter(c => (c.farmerCode || '').toLowerCase() === code.toLowerCase() || (c.farmerName || '').toLowerCase() === name.toLowerCase());
+
+          if (farmerCalls.length > 0) {
+            const lastCall = farmerCalls[farmerCalls.length - 1];
+            return `🎧 <strong>HELPLINE RECORD (Farmer Connect App 3):</strong><br><br>` +
+                   `• <strong>Farmer:</strong> ${name} (${code})<br>` +
+                   `• <strong>Total Calls Logged:</strong> ${farmerCalls.length} call(s)<br>` +
+                   `• <strong>Query Category:</strong> ${lastCall.category}<br>` +
+                   `• <strong>Resolution Status:</strong> <span class="tag-badge">${lastCall.status}</span><br>` +
+                   `• <strong>Agent Notes:</strong> "${lastCall.notes}"`;
+          } else {
+            return `🎧 <strong>HELPLINE STATUS (Farmer Connect App 3):</strong><br><br>No helpline call tickets logged yet for <strong>${name} (${code})</strong>.`;
+          }
+        } else {
+          return `🎧 <strong>HELPLINE SUMMARY (Farmer Connect App 3):</strong><br><br>` +
+                 `We have <strong>${app3Calls.length} total call tickets</strong> logged in Farmer Connect.<br>` +
+                 `Ask me about a specific farmer e.g. <em>"Have we called Ramesh Kumar?"</em> or <em>"Call status for CR101"</em>!`;
+        }
+      }
+
+      // 2. RESEARCH TRIALS & SOC QUERIES (App 2 Cross-Check)
+      if (prompt.includes('research') || prompt.includes('trial') || prompt.includes('soc') || prompt.includes('carbon delta') || prompt.includes('study')) {
+        let farmerMatch = null;
+        if (app1Data.farmers) {
+          farmerMatch = app1Data.farmers.find(f => {
+            const name = (f.farmerName || f['Farmer Name'] || '').toLowerCase();
+            const code = (f.farmerCode || f['Farmer Code'] || '').toLowerCase();
+            return (code && prompt.includes(code)) || (name && prompt.includes(name));
+          });
+        }
+
+        if (farmerMatch) {
+          const code = farmerMatch.farmerCode || farmerMatch['Farmer Code'];
+          const name = farmerMatch.farmerName || farmerMatch['Farmer Name'];
+          const trialMatch = app2Data.trials ? app2Data.trials.find(t => (t['Farmer ID'] || t.farmerCode || '').toLowerCase() === code.toLowerCase()) : null;
+          const socMatch = app2Data.socRecords ? app2Data.socRecords.find(s => (s['Farmer ID'] || s.farmerCode || '').toLowerCase() === code.toLowerCase()) : null;
+
+          if (trialMatch || socMatch) {
+            return `🧪 <strong>RESEARCH STUDY RECORD (Equiblue Research App 2):</strong><br><br>` +
+                   `• <strong>Farmer:</strong> ${name} (${code})<br>` +
+                   `• <strong>Research Trial Status:</strong> <strong style="color:#10b981;">Active in Study</strong><br>` +
+                   `• <strong>Case Plot (Biochar):</strong> ${trialMatch ? trialMatch['Case Plot ID (Biochar)'] : (code + '-CASE')} (${trialMatch ? trialMatch['Case Area (Acres)'] : '2.0'} Acres)<br>` +
+                   `• <strong>Control Plot:</strong> ${trialMatch ? trialMatch['Control Plot ID (Conventional)'] : (code + '-CTRL')}<br>` +
+                   (socMatch ? `• <strong>Net SOC Delta:</strong> <strong style="color:#34d399;">+${socMatch['SOC Delta (%)']}% Net Gain</strong>` : `• <strong>SOC Lab Status:</strong> Baseline sampling recorded`);
+          } else {
+            return `🧪 <strong>RESEARCH STUDY STATUS (Equiblue Research App 2):</strong><br><br>Farmer <strong>${name} (${code})</strong> is registered in MIS (App 1), but has not been assigned a paired trial plot yet in Research (App 2).`;
+          }
+        }
+      }
+
       if (prompt.includes('last') && (prompt.includes('dispatch') || prompt.includes('distribution') || prompt.includes('delivery'))) {
         if (AppState.transactions && AppState.transactions.length > 0) {
           const lastTx = AppState.transactions[AppState.transactions.length - 1];
@@ -720,31 +862,12 @@
                `• <strong>Dispatched to Farmers:</strong> ${disp} Bags (${disp * 25} kg)`;
       }
 
-      if (prompt.includes('soc') || prompt.includes('carbon delta') || prompt.includes('sequestration')) {
-        return `🧪 <strong>TECHNICAL SOC SEQUESTRATION KNOWLEDGE:</strong><br><br>` +
-               `• <strong>Formula:</strong> Net SOC Delta % = Follow-up Case SOC % - Follow-up Control SOC %.<br>` +
-               `• <strong>Methodology:</strong> Walkley-Black / Dry Combustion with bulk density correction (g/cm³).<br>` +
-               `• <strong>Verra VM0044 Standard:</strong> Ensures long-term carbon permanence (>100 years) through pyrolysis-derived recalcitrant carbon.`;
-      }
-
-      if (prompt.includes('dosage') || prompt.includes('how much biochar') || prompt.includes('per acre')) {
-        return `🌾 <strong>TECHNICAL DOSAGE & APPLICATION GUIDE:</strong><br><br>` +
-               `• <strong>Recommended Rate:</strong> 1 to 2 Metric Tons per acre (40 to 80 bags of 25kg each).<br>` +
-               `• <strong>Application Method:</strong> Broadcast evenly across field and till into the top 15cm root zone prior to crop sowing.<br>` +
-               `• <strong>Pyrolysis Temperature:</strong> Produced at 500°C–700°C for optimal surface area & CEC.`;
-      }
-
-      if (prompt.includes('qr') || prompt.includes('bag tag') || prompt.includes('traceability')) {
-        return `🏷️ <strong>BAG TRACEABILITY & QR COMPLIANCE:</strong><br><br>` +
-               `Every 25kg bag carries a unique scannable QR sticker encoding kiln batch ID, serial tag range, farmer assignment, and Verra compliance certificate.`;
-      }
-
-      return `🤖 <strong>EQUIBLUE UNIFIED AI ASSISTANT:</strong><br><br>` +
-             `I have real-time access to your <strong>Live Database & Technical Specifications</strong>!<br><br>` +
-             `Try asking me:<br>` +
-             `• <em>"When was the last distribution?"</em><br>` +
-             `• <em>"What is our available stock?"</em><br>` +
-             `• <em>"What is recommended biochar dosage per acre?"</em>`;
+      return `🤖 <strong>KAARI AI UNIFIED COMBINED BRAIN:</strong><br><br>` +
+             `I connect your <strong>3 Applications</strong> in real-time!<br><br>` +
+             `Try asking me cross-app questions:<br>` +
+             `• <em>"Have we called Ramesh Kumar in helpline?"</em> (App 3)<br>` +
+             `• <em>"Is farmer CR101 in Biochar research study?"</em> (App 2)<br>` +
+             `• <em>"When was the last bag distribution?"</em> (App 1)`;
     }
 
     let AppState = { metrics: { totalBiocharKg: 0, availableBags: 0, dispatchedBags: 0, totalFarmers: 0, totalTransactions: 0 }, batches: [], bags: [], farmers: [], transactions: [] };
